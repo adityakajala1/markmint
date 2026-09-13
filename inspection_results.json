@@ -1,0 +1,83 @@
+{
+  "total_semesters": 8,
+  "semester_urls": [
+    "https://thehelpers.tech/semesters/1",
+    "https://thehelpers.tech/semesters/2",
+    "https://thehelpers.tech/semesters/3",
+    "https://thehelpers.tech/semesters/4",
+    "https://thehelpers.tech/semesters/5",
+    "https://thehelpers.tech/semesters/6",
+    "https://thehelpers.tech/semesters/7",
+    "https://thehelpers.tech/semesters/8"
+  ],
+  "sample_subjects": [
+    {
+      "semester": 3,
+      "subject_count": 17,
+      "subjects": [
+        {
+          "name": "Data Structures And Algorithm",
+          "url": "https://thehelpers.tech/semesters/3/subjects/Data%20Structures%20And%20Algorithm",
+          "resources": []
+        },
+        {
+          "name": "Computer Organization And Architecture",
+          "url": "https://thehelpers.tech/semesters/3/subjects/Computer%20Organization%20And%20Architecture",
+          "resources": []
+        },
+        {
+          "name": "Operating Systems",
+          "url": "https://thehelpers.tech/semesters/3/subjects/Operating%20Systems",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "semester": 5,
+      "subject_count": 8,
+      "subjects": [
+        {
+          "name": "Discrete Mathematics",
+          "url": "https://thehelpers.tech/semesters/5/subjects/Discrete%20Mathematics",
+          "resources": []
+        },
+        {
+          "name": "Full Stack Web Development",
+          "url": "https://thehelpers.tech/semesters/5/subjects/Full%20Stack%20Web%20Development",
+          "resources": []
+        },
+        {
+          "name": "Formal Language And Automata",
+          "url": "https://thehelpers.tech/semesters/5/subjects/Formal%20Language%20And%20Automata",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "semester": 7,
+      "subject_count": 6,
+      "subjects": [
+        {
+          "name": "Behavioral Psychology",
+          "url": "https://thehelpers.tech/semesters/7/subjects/Behavioral%20Psychology",
+          "resources": []
+        },
+        {
+          "name": "Professional Elective 5",
+          "url": "https://thehelpers.tech/semesters/7/subjects/Professional%20Elective%205",
+          "resources": []
+        },
+        {
+          "name": "Professional Elective 6",
+          "url": "https://thehelpers.tech/semesters/7/subjects/Professional%20Elective%206",
+          "resources": []
+        }
+      ]
+    }
+  ],
+  "requires_browser_automation": true,
+  "resource_types_found": [],
+  "hosting_services": [],
+  "estimated_subjects_per_semester": 10,
+  "estimated_total_resources": 320
+}

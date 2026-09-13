@@ -1,0 +1,13 @@
+[tool.pytest.ini_options]
+addopts = "-v --tb=short"
+testpaths = ["app/tests"]
+pythonpath = ["."]
+
+[tool.ruff]
+line-length = 88
+target-version = "py310"
+
+[tool.mypy]
+python_version = "3.14"
+strict = true
+ignore_missing_imports = true
