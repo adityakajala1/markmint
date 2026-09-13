@@ -1,4 +1,4 @@
-# Exam Reverse Engineer
+# Exam Reverse Engineer (ExamScope)
 
 Evidence-based examination analysis system.
 
