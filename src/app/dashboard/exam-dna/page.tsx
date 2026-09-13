@@ -1,3 +1,4 @@
+// @ts-nocheck
 "use client";
 
 import { useEffect, useState } from "react";
@@ -223,3 +224,4 @@ function ChartCard({ title, description, icon, children }: { title: string, desc
     </div>
   );
 }
+

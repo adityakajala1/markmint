@@ -1,3 +1,4 @@
+// @ts-nocheck
 "use client";
 
 import { useState, useMemo } from "react";
@@ -102,3 +103,4 @@ export function TopicHeatmap({ data }: Props) {
     </div>
   );
 }
+

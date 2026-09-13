@@ -26,7 +26,7 @@ export function TimelineCard({ day, className }: TimelineCardProps) {
 
   return (
     <div className={cn("glass rounded-2xl p-6", className)}>
-      <h3 className="mb-4 text-xl font-bold text-foreground">Day {day.dayNumber}</h3>
+      <h3 className="mb-4 text-xl font-bold text-foreground">Day {day.day}</h3>
       <motion.div
         variants={containerVariants}
         initial="hidden"
@@ -35,7 +35,7 @@ export function TimelineCard({ day, className }: TimelineCardProps) {
       >
         {day.tasks.map((task) => (
           <motion.div
-            key={task.id}
+            key={task.topic}
             variants={itemVariants}
             className="flex items-center justify-between rounded-xl bg-secondary/30 p-3"
           >

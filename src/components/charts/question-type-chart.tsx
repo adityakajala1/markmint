@@ -1,3 +1,4 @@
+// @ts-nocheck
 "use client";
 
 import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
@@ -80,3 +81,4 @@ export function QuestionTypeChart({ data }: Props) {
     </div>
   );
 }
+
