@@ -58,27 +58,94 @@ class ExamService:
         )
 
     def get_exam_dna(self, exam_id: int) -> ExamDNA:
-        # In a real scenario, this would query historical exams for the same course.
-        # Here we mock retrieving the structured dict required by DNAAnalyzer.
-        # This prevents DB logic leaking directly into routes.
+        target_exam = self.get_exam(exam_id)
+        if not target_exam:
+            # Fallback or raise, but for now we return an empty DNA if not found
+            return DNAAnalyzerService._empty_dna()
+            
+        # Fetch all exams for this course
+        historical_exams = self.db.query(Exam).filter(Exam.course_id == target_exam.course_id).all()
         
-        # Mock payload:
-        mock_exams = [
-            {
-                "id": "e1",
-                "year": 2023,
-                "questions": [
-                    {"id": "q1", "marks": 5.0, "topic": "Graphs", "question_type": "explanation"}
-                ]
-            }
-        ]
-        return DNAAnalyzerService.analyze(mock_exams)
+        # Build the payload expected by DNAAnalyzerService
+        exam_payloads = []
+        for ex in historical_exams:
+            q_payloads = []
+            for sec in ex.sections:
+                for q in sec.questions:
+                    # Get the first topic if it exists
+                    topic_name = q.topics[0].name if q.topics else None
+                    q_payloads.append({
+                        "id": str(q.id),
+                        "marks": q.marks or 0.0,
+                        "topic": topic_name,
+                        "unit": q.topics[0].unit.name if q.topics and q.topics[0].unit else None,
+                        "question_type": q.question_type,
+                        "cognitive_level": q.cognitive_level,
+                        "difficulty": q.difficulty,
+                        "repetition_type": q.family.repetition_type if q.family else None,
+                        "year": ex.year
+                    })
+            exam_payloads.append({
+                "id": str(ex.id),
+                "year": ex.year,
+                "questions": q_payloads
+            })
+            
+        return DNAAnalyzerService.analyze(exam_payloads)
 
     def get_exam_predictions(self, exam_id: int) -> ExamPredictions:
         engine = PredictionEngineService()
-        mock_exams = [
-            {"id": "e1", "year": 2021, "questions": [{"id": "q1", "topic": "Trees", "marks": 20.0}]},
-            {"id": "e2", "year": 2022, "questions": [{"id": "q2", "topic": "Trees", "marks": 25.0}]},
-            {"id": "e3", "year": 2023, "questions": [{"id": "q3", "topic": "Trees", "marks": 25.0}]}
-        ]
-        return engine.generate_predictions(mock_exams)
+        target_exam = self.get_exam(exam_id)
+        if not target_exam:
+            return ExamPredictions(predictions=[], total_papers_analyzed=0, insufficient_data=True)
+            
+        historical_exams = self.db.query(Exam).filter(Exam.course_id == target_exam.course_id).all()
+        
+        exam_payloads = []
+        for ex in historical_exams:
+            q_payloads = []
+            for sec in ex.sections:
+                for q in sec.questions:
+                    topic_name = q.topics[0].name if q.topics else None
+                    q_payloads.append({
+                        "id": str(q.id),
+                        "topic": topic_name,
+                        "marks": q.marks or 0.0
+                    })
+            exam_payloads.append({
+                "id": str(ex.id),
+                "year": ex.year,
+                "questions": q_payloads
+            })
+            
+        return engine.generate_predictions(exam_payloads)
+
+    def import_extraction(self, course_id: int, year: int, term: str, extraction_data: dict) -> Exam:
+        from app.models.core import Section
+        
+        # Create exam
+        new_exam = Exam(course_id=course_id, year=year, term=term)
+        self.db.add(new_exam)
+        self.db.flush() # get ID
+        
+        for sec_data in extraction_data.get('sections', []):
+            new_section = Section(
+                exam_id=new_exam.id,
+                name=sec_data.get('name', 'General'),
+                instructions=sec_data.get('instructions')
+            )
+            self.db.add(new_section)
+            self.db.flush()
+            
+            for q_data in sec_data.get('questions', []):
+                new_q = Question(
+                    section_id=new_section.id,
+                    question_number=q_data.get('question_number', '?'),
+                    original_text=q_data.get('original_text', ''),
+                    marks=q_data.get('marks')
+                )
+                self.db.add(new_q)
+                
+        self.db.commit()
+        self.db.refresh(new_exam)
+        return new_exam

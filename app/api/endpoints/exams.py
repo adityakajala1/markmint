@@ -16,6 +16,26 @@ def create_exam(exam_in: ExamCreate, db: Session = Depends(get_db)) -> Exam:
     service = ExamService(db)
     return service.create_exam(exam_in)
 
+from pydantic import BaseModel
+from app.schemas.extraction import DocumentExtractionResult
+
+class ExamImportRequest(BaseModel):
+    course_id: int
+    year: int
+    term: str
+    extraction: DocumentExtractionResult
+
+@router.post("/import", response_model=Exam)
+def import_exam_extraction(import_req: ExamImportRequest, db: Session = Depends(get_db)) -> Exam:
+    service = ExamService(db)
+    exam = service.import_extraction(
+        course_id=import_req.course_id,
+        year=import_req.year,
+        term=import_req.term,
+        extraction_data=import_req.extraction.model_dump()
+    )
+    return exam
+
 @router.get("/{exam_id}", response_model=Exam)
 def get_exam(exam_id: int, db: Session = Depends(get_db)) -> Exam:
     service = ExamService(db)
