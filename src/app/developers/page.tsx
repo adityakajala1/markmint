@@ -14,16 +14,18 @@ interface Developer {
   status: string;
   github: string;
   linkedin: string;
+  instagram: string;
 }
 
 const developers: Developer[] = [
   {
     name: "Aditya Kajala",
-    role: "Front End Engineer",
+    role: "Frontend Engineer",
     avatar: "https://github.com/adityakajala1.png",
     status: "Listening to music",
     github: "https://github.com/adityakajala1",
-    linkedin: "https://linkedin.com/in/adityakajala"
+    linkedin: "https://www.linkedin.com/in/aditya-kajala-375b9b389/",
+    instagram: "https://instagram.com/adipbx"
   },
   {
     name: "Naman",
@@ -31,7 +33,8 @@ const developers: Developer[] = [
     avatar: "https://github.com/namanipie.png",
     status: "Larping",
     github: "https://github.com/namanipie",
-    linkedin: "https://linkedin.com/in/namankumar"
+    linkedin: "https://linkedin.com/in/namankumar",
+    instagram: "https://instagram.com/nam4nn"
   }
 ];
 
@@ -81,6 +84,14 @@ function DeveloperCard({ dev }: { dev: Developer }) {
           className="text-muted-foreground hover:text-foreground transition-colors p-2 hover:bg-accent/10 rounded-full"
         >
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect width="4" height="12" x="2" y="9"/><circle cx="4" cy="4" r="2"/></svg>
+        </Link>
+        <Link 
+          href={dev.instagram} 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="text-muted-foreground hover:text-foreground transition-colors p-2 hover:bg-accent/10 rounded-full"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><rect width="20" height="20" x="2" y="2" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" x2="17.51" y1="6.5" y2="6.5"/></svg>
         </Link>
       </div>
     </div>

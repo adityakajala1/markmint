@@ -15,7 +15,7 @@ export function Navbar() {
 
   const links = [
     { href: "/", label: "Home" },
-    { href: "/mintai", label: "MintAi" },
+    { href: "/mintai", label: "MintAI" },
     { href: "/calculator", label: "Calculator" },
     { href: "/developers", label: "Developers" },
   ];
