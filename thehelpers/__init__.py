@@ -51,7 +51,7 @@ from .downloader import ResourceDownloader
 from .storage import IngestionRepository
 
 # Ingest pipeline exports
-from .ingest import main as ingest_main, IngestionReport
+# Removed ingest import
 
 __all__ = [
     # Metadata
@@ -74,6 +74,7 @@ __all__ = [
     "ResourceDownloader",
     "IngestionRepository",
     # Ingest pipeline
-    "ingest_main",
-    "IngestionReport",
+    
+    
 ]
+
