@@ -1,14 +1,14 @@
 import os
 import sqlite3
 import json
+import sys
+
+from sqlalchemy.exc import OperationalError
 from app.core.database import SessionLocal, Base, engine
 from app.models.core import Course, Topic, Exam, Section, Question
 from app.services.extraction.pdf_parser import PDFParser
 from app.services.extraction.question_extractor import QuestionExtractor
 from app.services.exam import ExamService
-
-# Ensure db tables exist
-Base.metadata.create_all(bind=engine)
 
 def process_downloads():
     print("Starting Ingestion Feeder...")
@@ -17,6 +17,15 @@ def process_downloads():
     if not os.path.exists(db_path):
         print(f"Cache DB not found at {db_path}. Is the scraper running?")
         return
+
+    # Ensure db tables exist
+    try:
+        Base.metadata.create_all(bind=engine)
+    except OperationalError as e:
+        print("\n[!] CRITICAL: Could not connect to the PostgreSQL database.")
+        print("Please ensure your database is running via: docker-compose up -d")
+        print("Exiting feeder pipeline.\n")
+        sys.exit(1)
 
     # Connect to scraper's SQLite DB
     conn = sqlite3.connect(db_path)
