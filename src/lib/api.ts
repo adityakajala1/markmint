@@ -1,4 +1,4 @@
-const API_BASE = "http://localhost:8000/api";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
 
 async function fetchAPI(path: string, options?: RequestInit) {
   const res = await fetch(`${API_BASE}${path}`, options);
@@ -29,3 +29,11 @@ export async function getExamDNA(id: string | number) {
 export async function getExamPredictions(id: string | number) {
   return fetchAPI(`/exams/${id}/predictions`);
 }
+
+// Mock functions for ExamDNA Dashboard charts
+export async function getHeatmapData(courseId: string) { return []; }
+export async function getHistoricalTrends(courseId: string) { return []; }
+export async function getMarksPattern(courseId: string) { return []; }
+export async function getUnitWeights(courseId: string) { return []; }
+export async function getConfidenceGroups(courseId: string) { return []; }
+export async function getStudyPlan() { return { totalDays: 0, totalHours: 0, days: [], recommendations: [] }; }

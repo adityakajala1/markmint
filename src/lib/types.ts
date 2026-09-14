@@ -146,3 +146,6 @@ export type FilterState = {
   questionType: string | null;
   search: string;
 };
+
+export type HeatmapData = HeatmapCell;
+export type TrendData = HistoricalTrend;
