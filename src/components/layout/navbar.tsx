@@ -1,50 +1,40 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Dna, Menu } from "lucide-react";
-import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
-interface NavbarProps {
-  onMenuClick?: () => void;
-}
-
-export function Navbar({ onMenuClick }: NavbarProps) {
+export function Navbar() {
   const pathname = usePathname();
 
   const links = [
-    { href: "/dashboard", label: "Dashboard" },
-    { href: "/predictions", label: "Predictions" },
-    { href: "/study-plan", label: "Study Plan" },
+    { href: "/", label: "Home" },
+    { href: "/papers", label: "Papers" },
+    { href: "/calculator", label: "Calculator" },
   ];
 
   return (
-    <motion.header
-      initial={{ y: -100, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      transition={{ type: "spring", stiffness: 300, damping: 30 }}
-      className="sticky top-0 z-50 flex h-16 items-center justify-between border-b border-border bg-background/80 px-6 backdrop-blur-md glass"
-    >
-      <div className="flex items-center gap-6">
+    <header className="sticky top-0 z-50 flex h-16 items-center justify-between border-b border-border bg-card/80 px-6 backdrop-blur-md">
+      <div className="flex items-center gap-6 w-full max-w-6xl mx-auto">
         <Link href="/" className="flex items-center gap-2">
           <Dna className="h-6 w-6 text-primary" />
           <span className="text-xl font-bold tracking-tight text-foreground">
-            Exam<span className="text-primary">DNA</span>
+            Exam<span className="text-primary">Scope</span>
           </span>
         </Link>
-        <nav className="hidden md:flex items-center gap-1">
+        <nav className="hidden md:flex items-center gap-2 ml-8">
           {links.map((link) => {
-            const isActive = pathname.startsWith(link.href);
+            const isActive = pathname === link.href || (link.href !== "/" && pathname.startsWith(link.href));
             return (
               <Link
                 key={link.href}
                 href={link.href}
                 className={cn(
-                  "px-3 py-2 rounded-md text-sm font-medium transition-colors hover:bg-accent/10 hover:text-accent",
+                  "px-4 py-2 rounded-full text-sm font-medium transition-all duration-200",
                   isActive
                     ? "bg-primary/10 text-primary"
-                    : "text-muted-foreground"
+                    : "text-foreground/70 hover:text-primary hover:bg-black/5"
                 )}
               >
                 {link.label}
@@ -52,16 +42,12 @@ export function Navbar({ onMenuClick }: NavbarProps) {
             );
           })}
         </nav>
+        <div className="md:hidden ml-auto">
+          <button className="p-2 text-foreground/70 hover:text-primary transition-colors">
+            <Menu className="h-6 w-6" />
+          </button>
+        </div>
       </div>
-      <div className="flex items-center">
-        <button
-          className="md:hidden p-2 text-muted-foreground hover:text-foreground"
-          onClick={onMenuClick}
-          aria-label="Toggle Menu"
-        >
-          <Menu className="h-6 w-6" />
-        </button>
-      </div>
-    </motion.header>
+    </header>
   );
 }

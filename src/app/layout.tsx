@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ExamDNA — Reverse-engineering the way exams are made",
+  title: "ExamScope — Reverse-engineering the way exams are made",
   description:
     "An exam pattern analysis platform that reverse-engineers previous year papers and shows students how a course is historically examined.",
 };
@@ -27,7 +27,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} dark h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-background text-foreground">
         {children}

@@ -51,7 +51,7 @@ export function MobileDrawer({ isOpen, onClose }: MobileDrawerProps) {
               <div className="flex items-center gap-2">
                 <Dna className="h-6 w-6 text-primary" />
                 <span className="text-xl font-bold tracking-tight text-foreground">
-                  Exam<span className="text-primary">DNA</span>
+                  Exam<span className="text-primary">Scope</span>
                 </span>
               </div>
               <button
