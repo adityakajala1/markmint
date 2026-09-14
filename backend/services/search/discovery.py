@@ -3,7 +3,7 @@ from typing import Any, Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, and_, desc
 
-from backend.models.core import Question, Concept, StudyEvidence, Document, Exam
+from backend.models.core import Question, Concept, StudyEvidence, Document, Exam, Section
 from backend.schemas import (
     SearchQuery, SearchResult, SearchResultType, ParsedIntent, SearchFilters
 )
@@ -58,10 +58,7 @@ class DiscoverySearchEngine:
         if intent.clean_search_term:
             term = f"%{intent.clean_search_term}%"
             query = query.filter(
-                or_(
-                    Question.text.ilike(term),
-                    Question.topic.ilike(term)
-                )
+                Question.original_text.ilike(term)
             )
             
         results = query.limit(limit).all()
@@ -71,10 +68,10 @@ class DiscoverySearchEngine:
             out.append(SearchResult(
                 id=q.id,
                 result_type=SearchResultType.EXAM_QUESTION,
-                title=f"Question on {q.topic or 'Unknown'}",
-                text_snippet=q.text[:200] if q.text else "",
+                title=f"Question on {q.topics[0].name if q.topics else 'Unknown'}",
+                text_snippet=q.original_text[:200] if q.original_text else "",
                 year=q.section.exam.year,
-                topic=q.topic,
+                topic=q.topics[0].name if q.topics else None,
                 relevance_score=0.9, # Mock embedding distance
                 provenance_url=q.section.exam.document.original_url if q.section.exam.document else None
             ))

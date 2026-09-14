@@ -16,6 +16,8 @@ class Settings(BaseSettings):
     
     # Must be provided via .env or environment variable
     DATABASE_URL: Optional[str] = None
+    CORS_ORIGINS: list[str] = ["http://localhost:3000", "http://127.0.0.1:3000"]
+    DEBUG: bool = False
 
     model_config = SettingsConfigDict(
         env_file=".env", env_file_encoding="utf-8", extra="ignore"

@@ -8,14 +8,24 @@ from backend.core.database import engine, Base
 if settings.ENVIRONMENT != Environment.PRODUCTION:
     Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title=settings.PROJECT_NAME)
+app = FastAPI(
+    title=settings.PROJECT_NAME,
+    debug=settings.DEBUG,
+    docs_url="/docs" if settings.ENVIRONMENT != Environment.PRODUCTION else None, # Disable swagger in prod if wanted, but standard is to keep it or just disable debug
+    redoc_url="/redoc" if settings.ENVIRONMENT != Environment.PRODUCTION else None
+)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"], # Local frontend
+    allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.get("/health", tags=["Health"])
+def health_check():
+    """Lightweight health endpoint."""
+    return {"status": "ok", "environment": settings.ENVIRONMENT}
 
 app.include_router(api_router, prefix="/api")
