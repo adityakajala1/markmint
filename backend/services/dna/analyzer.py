@@ -31,7 +31,7 @@ class DNAAnalyzerService:
         Analyzes historical exams mathematically. 
         Expects a list of exam dicts mapped from the database.
         """
-        sorted_exams = sorted(exams, key=lambda x: x.get("year", 0))
+        sorted_exams = sorted(exams, key=lambda x: x.get("year") or 0)
         total_exams = len(sorted_exams)
         
         all_questions = []
@@ -67,11 +67,11 @@ class DNAAnalyzerService:
             pass
 
         # 1. Base Aggregators
-        total_marks = sum(q.get("marks", 0.0) or 0.0 for q in all_questions)
+        total_marks = sum(q.get("marks", 0.0) or 0.0 for q in all_questions if not q.get("is_alternative"))
         recent_total_marks = sum(
             q.get("marks", 0.0) or 0.0 
             for e in sorted_exams if e.get("year") in recent_years_set 
-            for q in e.get("questions", [])
+            for q in e.get("questions", []) if not q.get("is_alternative")
         )
         
         topics_data: dict[str, Any] = defaultdict(lambda: {

@@ -60,7 +60,8 @@ class DocumentService:
                     section_id=new_section.id,
                     question_number=q_data.get('question_number', '?'),
                     original_text=q_data.get('original_text', ''),
-                    marks=q_data.get('marks')
+                    marks=q_data.get('marks'),
+                    is_alternative=q_data.get('is_alternative', False)
                 )
                 self.db.add(new_q)
                 

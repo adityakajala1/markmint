@@ -141,6 +141,7 @@ class QuestionBase(BaseModel):
     original_text: str
     normalized_text: Optional[str] = None
     marks: Optional[float] = None
+    is_alternative: bool = False
     question_type: Optional[str] = None
     cognitive_level: Optional[str] = None
     difficulty: Optional[float] = None
@@ -312,6 +313,7 @@ class ExtractedQuestion(BaseModel):
     question_number: str
     original_text: str
     marks: Optional[float] = None
+    is_alternative: bool = False
     page_number: int
     confidence: float
 

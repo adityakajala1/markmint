@@ -35,9 +35,51 @@ class BacktestEngine:
         self.db = db
 
     def _get_historical_exams(self, course_id: int, up_to_year: int) -> list[dict[str, Any]]:
-        # In a real environment, this fetches deep relations without leaking future data.
-        # Stubbed for backtest compilation logic demonstration
-        pass
+        # To strictly prevent leakage, we query ONLY exams < up_to_year
+        exams = (
+            self.db.query(Exam)
+            .filter(Exam.course_id == course_id, Exam.year < up_to_year)
+            .all()
+        )
+        
+        out = []
+        # First pass: find the earliest question for each family in this historical window
+        # so we don't leak terminology from future questions that happen to share the same global family.
+        historical_family_names = {}
+        for ex in sorted(exams, key=lambda x: x.year or 0):
+            for sec in ex.sections:
+                for q in sec.questions:
+                    if q.family_id and q.family_id not in historical_family_names:
+                        historical_family_names[q.family_id] = q.original_text[:50] + "..."
+                        
+        for ex in exams:
+            ex_dict = {
+                "id": ex.id,
+                "year": ex.year,
+                "exam_type": ex.term, # term serves as exam_type in new schema
+                "questions": []
+            }
+            for sec in ex.sections:
+                for q in sec.questions:
+                    # Topics are now mapped via QuestionConcept but we stub it for backtest backward-compatibility
+                    topic = None
+                    if q.concept_associations:
+                        topic = q.concept_associations[0].concept.name
+                    
+                    ex_dict["questions"].append({
+                        "id": q.id,
+                        "marks": q.marks,
+                        "is_alternative": q.is_alternative,
+                        "topic": topic,
+                        "unit": None,
+                        "question_type": q.question_type,
+                        "repetition_type": q.family.repetition_type if q.family else None,
+                        # Prevent global terminology leakage by using the first historical occurrence as the name
+                        "family_name": historical_family_names.get(q.family_id) if q.family_id else None,
+                        "difficulty": q.difficulty
+                    })
+            out.append(ex_dict)
+        return out
 
     def run_backtest(self, course_id: int) -> Optional[BacktestReport]:
         course = self.db.query(Course).filter(Course.id == course_id).first()

@@ -34,6 +34,7 @@ class QuestionExtractor:
         sections.append(current_section)
 
         current_question: Optional[dict[str, Any]] = None
+        pending_alternative_flag = False
 
         for page_info in pages_data:
             page_num = int(page_info["page_number"])
@@ -43,6 +44,11 @@ class QuestionExtractor:
             for line in lines:
                 line = line.strip()
                 if not line:
+                    continue
+                
+                # Check for explicit OR block between questions
+                if line.lower() in ["or", "(or)", "-or-", "[or]", "--or--"]:
+                    pending_alternative_flag = True
                     continue
 
                 # Check for section boundary
@@ -84,7 +90,9 @@ class QuestionExtractor:
                         "text": [q_text],
                         "marks": marks,
                         "page": page_num,
+                        "is_alternative": pending_alternative_flag
                     }
+                    pending_alternative_flag = False
                 elif current_question:
                     # Continuation of current question
                     marks_match = cls.MARKS_PATTERN.search(line)
@@ -123,6 +131,7 @@ class QuestionExtractor:
                     question_number=q_data["question_number"],
                     original_text=text,
                     marks=q_data["marks"],
+                    is_alternative=q_data.get("is_alternative", False),
                     page_number=q_data["page"],
                     confidence=confidence,
                 )

@@ -1,5 +1,5 @@
 import enum
-from sqlalchemy import Column, Integer, String, Float, ForeignKey, Table, Text, Enum as SQLEnum
+from sqlalchemy import Column, Integer, String, Float, ForeignKey, Table, Text, Boolean, Enum as SQLEnum
 from sqlalchemy.orm import relationship
 
 from backend.core.database import Base
@@ -35,8 +35,8 @@ syllabus_concept = Table(
 # Many-to-many for Question and Concept with confidence
 class QuestionConcept(Base):
     __tablename__ = "question_concept"
-    question_id = Column(Integer, ForeignKey("questions.id"), primary_key=True)
-    concept_id = Column(Integer, ForeignKey("concepts.id"), primary_key=True)
+    question_id = Column(Integer, ForeignKey("questions.id"), primary_key=True, index=True)
+    concept_id = Column(Integer, ForeignKey("concepts.id"), primary_key=True, index=True)
     confidence = Column(SQLEnum(MappingConfidence), default=MappingConfidence.UNRESOLVED)
 
     question = relationship("Question", back_populates="concept_associations")
@@ -86,9 +86,9 @@ class Concept(Base):
     # New fields for intelligence engine
     subject = Column(String, nullable=True) # To prevent cross-subject ambiguity
     status = Column(SQLEnum(ConceptStatus), default=ConceptStatus.CANONICAL)
-    parent_id = Column(Integer, ForeignKey("concepts.id"), nullable=True)
-    unit_id = Column(Integer, ForeignKey("units.id"), nullable=True)
-    subtopic_id = Column(Integer, ForeignKey("subtopics.id"), nullable=True)
+    parent_id = Column(Integer, ForeignKey("concepts.id"), nullable=True, index=True)
+    unit_id = Column(Integer, ForeignKey("units.id"), nullable=True, index=True)
+    subtopic_id = Column(Integer, ForeignKey("subtopics.id"), nullable=True, index=True)
 
     parent = relationship("Concept", remote_side=[id], back_populates="children")
     children = relationship("Concept", back_populates="parent")
@@ -109,7 +109,7 @@ class ConceptAlias(Base):
     """String matches mapped to a canonical concept."""
     __tablename__ = "concept_aliases"
     id = Column(Integer, primary_key=True, index=True)
-    concept_id = Column(Integer, ForeignKey("concepts.id"), nullable=True) # Nullable if UNRESOLVED
+    concept_id = Column(Integer, ForeignKey("concepts.id"), nullable=True, index=True) # Nullable if UNRESOLVED
     alias = Column(String, unique=True, index=True, nullable=False)
     confidence = Column(SQLEnum(MappingConfidence), default=MappingConfidence.UNRESOLVED)
 
@@ -120,8 +120,8 @@ class StudyEvidence(Base):
     """Knowledge extracted from lecture notes or study material."""
     __tablename__ = "study_evidences"
     id = Column(Integer, primary_key=True, index=True)
-    document_id = Column(Integer, ForeignKey("documents.id"), nullable=False)
-    concept_id = Column(Integer, ForeignKey("concepts.id"), nullable=False)
+    document_id = Column(Integer, ForeignKey("documents.id"), nullable=False, index=True)
+    concept_id = Column(Integer, ForeignKey("concepts.id"), nullable=False, index=True)
     
     knowledge_type = Column(String, nullable=False) # 'definition', 'formula', 'algorithm', 'context'
     content = Column(Text, nullable=False)
@@ -146,7 +146,7 @@ class Course(Base):
 class Syllabus(Base):
     __tablename__ = "syllabuses"
     id = Column(Integer, primary_key=True, index=True)
-    course_id = Column(Integer, ForeignKey("courses.id"), nullable=False)
+    course_id = Column(Integer, ForeignKey("courses.id"), nullable=False, index=True)
     version = Column(String, nullable=False)
 
     course = relationship("Course", back_populates="syllabuses")
@@ -156,7 +156,7 @@ class Syllabus(Base):
 class Unit(Base):
     __tablename__ = "units"
     id = Column(Integer, primary_key=True, index=True)
-    syllabus_id = Column(Integer, ForeignKey("syllabuses.id"), nullable=False)
+    syllabus_id = Column(Integer, ForeignKey("syllabuses.id"), nullable=False, index=True)
     name = Column(String, nullable=False)
     number = Column(Integer, nullable=False)
 
@@ -167,7 +167,7 @@ class Unit(Base):
 class Topic(Base):
     __tablename__ = "topics"
     id = Column(Integer, primary_key=True, index=True)
-    unit_id = Column(Integer, ForeignKey("units.id"), nullable=False)
+    unit_id = Column(Integer, ForeignKey("units.id"), nullable=False, index=True)
     name = Column(String, nullable=False)
 
     unit = relationship("Unit", back_populates="topics")
@@ -178,7 +178,7 @@ class Topic(Base):
 class Subtopic(Base):
     __tablename__ = "subtopics"
     id = Column(Integer, primary_key=True, index=True)
-    topic_id = Column(Integer, ForeignKey("topics.id"), nullable=False)
+    topic_id = Column(Integer, ForeignKey("topics.id"), nullable=False, index=True)
     name = Column(String, nullable=False)
 
     topic = relationship("Topic", back_populates="subtopics")
@@ -200,7 +200,7 @@ class Exam(Base):
 class Section(Base):
     __tablename__ = "sections"
     id = Column(Integer, primary_key=True, index=True)
-    exam_id = Column(Integer, ForeignKey("exams.id"), nullable=False)
+    exam_id = Column(Integer, ForeignKey("exams.id"), nullable=False, index=True)
     name = Column(String, nullable=False)
     instructions = Column(Text, nullable=True)
 
@@ -220,13 +220,14 @@ class QuestionFamily(Base):
 class Question(Base):
     __tablename__ = "questions"
     id = Column(Integer, primary_key=True, index=True)
-    section_id = Column(Integer, ForeignKey("sections.id"), nullable=False)
-    family_id = Column(Integer, ForeignKey("question_families.id"), nullable=True)
+    section_id = Column(Integer, ForeignKey("sections.id"), nullable=False, index=True)
+    family_id = Column(Integer, ForeignKey("question_families.id"), nullable=True, index=True)
 
     question_number = Column(String, nullable=False)
     original_text = Column(Text, nullable=False)
     normalized_text = Column(Text, nullable=True)
     marks = Column(Float, nullable=True)
+    is_alternative = Column(Boolean, default=False, nullable=False)
 
     question_type = Column(String, nullable=True)
     cognitive_level = Column(String, nullable=True)
@@ -243,7 +244,7 @@ class Question(Base):
 class Evidence(Base):
     __tablename__ = "evidences"
     id = Column(Integer, primary_key=True, index=True)
-    question_id = Column(Integer, ForeignKey("questions.id"), nullable=False)
+    question_id = Column(Integer, ForeignKey("questions.id"), nullable=False, index=True)
     description = Column(Text, nullable=False)
     confidence = Column(Float, nullable=False)
 
