@@ -1,7 +1,7 @@
 import pytest
-from backend.services.classification.classifier import ClassificationService
-from backend.schemas.classification import ClassificationResult
-from backend.services.classification.providers.base import BaseClassificationProvider
+from backend.services.question_classifier import ClassificationService
+from backend.schemas import ClassificationResult
+from backend.services.question_classifier import BaseClassificationProvider
 
 class MockProvider(BaseClassificationProvider):
     def get_embeddings(self, texts: list[str]) -> list[list[float]]:

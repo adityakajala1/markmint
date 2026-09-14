@@ -1,6 +1,6 @@
 import pytest
-from backend.services.similarity.detector import SimilarityService, SimilarityThresholds
-from backend.services.classification.providers.base import BaseClassificationProvider
+from backend.services.similarity import SimilarityService, SimilarityThresholds
+from backend.services.question_classifier import BaseClassificationProvider
 import numpy as np
 
 class MockSimProvider(BaseClassificationProvider):

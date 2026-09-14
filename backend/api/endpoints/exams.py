@@ -3,10 +3,10 @@ from sqlalchemy.orm import Session
 from typing import Optional
 
 from backend.core.database import get_db
-from backend.schemas.core import Exam, ExamCreate, Question
-from backend.schemas.pagination import Page
-from backend.schemas.dna import ExamDNA
-from backend.schemas.prediction import ExamPredictions
+from backend.schemas import Exam, ExamCreate, Question
+from backend.schemas import Page
+from backend.schemas import ExamDNA
+from backend.schemas import ExamPredictions
 from backend.services.exam import ExamService
 
 router = APIRouter()
@@ -17,7 +17,7 @@ def create_exam(exam_in: ExamCreate, db: Session = Depends(get_db)) -> Exam:
     return service.create_exam(exam_in)
 
 from pydantic import BaseModel
-from backend.schemas.extraction import DocumentExtractionResult
+from backend.schemas import DocumentExtractionResult
 
 class ExamImportRequest(BaseModel):
     course_id: int
@@ -57,12 +57,4 @@ def get_exam_questions(
     service = ExamService(db)
     return service.get_exam_questions(exam_id, page, size, unit, topic, question_type) # type: ignore
 
-@router.get("/{exam_id}/dna", response_model=ExamDNA)
-def get_exam_dna(exam_id: int, db: Session = Depends(get_db)) -> ExamDNA:
-    service = ExamService(db)
-    return service.get_exam_dna(exam_id)
 
-@router.get("/{exam_id}/predictions", response_model=ExamPredictions)
-def get_exam_predictions(exam_id: int, db: Session = Depends(get_db)) -> ExamPredictions:
-    service = ExamService(db)
-    return service.get_exam_predictions(exam_id)

@@ -2,7 +2,7 @@ from typing import Any
 from collections import defaultdict
 import math
 
-from backend.schemas.prediction import Prediction, ExamPredictions
+from backend.schemas import Prediction, ExamPredictions
 
 class PredictionEngineService:
     def __init__(self, min_sample_size: int = 3, recency_weight_decay: float = 0.9):

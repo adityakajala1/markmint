@@ -1,7 +1,7 @@
 import re
 from typing import Any, Optional
 
-from backend.schemas.extraction import (
+from backend.schemas import (
     DocumentExtractionResult,
     ExtractedQuestion,
     ExtractedSection,

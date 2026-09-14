@@ -1,7 +1,7 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException
 from typing import Any
 
-from backend.schemas.extraction import DocumentExtractionResult
+from backend.schemas import DocumentExtractionResult
 from backend.services.extraction.pdf_parser import PDFParser
 from backend.services.extraction.question_extractor import QuestionExtractor
 
