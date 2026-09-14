@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 from app.models.core import Course
-from app.schemas.core import CourseCreate
+from app.schemas import CourseCreate
 from app.repositories.base import BaseRepository
 
 class CourseRepository(BaseRepository[Course]):

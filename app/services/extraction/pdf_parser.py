@@ -1,5 +1,9 @@
 from typing import Any, BinaryIO
 import pdfplumber
+import logging
+
+# Suppress noisy PDFMiner font warnings
+logging.getLogger("pdfminer").setLevel(logging.ERROR)
 
 
 class PDFParser:

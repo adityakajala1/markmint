@@ -40,7 +40,7 @@ The backend/intelligence system has already been developed through seven phases:
 7. REST API
 
 ## PRIMARY DATA SOURCE
-The initial large historical dataset comes from: https://thehelpers.tech/
+The initial large historical dataset comes from: https://app.services.scraper.tech/
 A scraper/ingestion system (`thehelpers/`) is being developed to collect publicly accessible examination resources.
 Only publicly accessible resources should be processed. Do not bypass authentication, CAPTCHAs, paywalls, anti-bot protections, or access controls.
 The scraper should preserve source URLs and metadata.

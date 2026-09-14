@@ -1,11 +1,11 @@
 from typing import Optional, Any
 from sqlalchemy.orm import Session
 from app.models.core import Exam, Question, Topic
-from app.schemas.core import ExamCreate
+from app.schemas import ExamCreate
 from app.repositories.base import BaseRepository
-from app.schemas.pagination import Page
-from app.schemas.dna import ExamDNA
-from app.schemas.prediction import ExamPredictions
+from app.schemas import Page
+from app.schemas import ExamDNA
+from app.schemas import ExamPredictions
 from app.services.dna.analyzer import DNAAnalyzerService
 from app.services.prediction.engine import PredictionEngineService
 
