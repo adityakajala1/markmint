@@ -26,32 +26,57 @@ def save_progress(progress):
         json.dump(progress, f, indent=2)
 
 
-async def main():
+async def run_scrape(max_downloads: int = 50):
     import re
     from urllib.parse import quote
 
     print("=" * 60)
     print("  TheHelpers.tech Full Site Scraper")
-    print("  Downloads ALL PDFs with Google Drive links")
+    print(f"  Max downloads for this run: {max_downloads}")
     print("=" * 60)
 
     progress = load_progress()
+    initial_downloaded = progress["stats"]["downloaded"]
+    initial_errors = progress["stats"]["errors"]
+    
     downloader = ResourceDownloader()
+    
+    run_stats = {
+        "discovered": 0,
+        "downloaded": 0,
+        "skipped_no_id": 0,
+        "errors": 0
+    }
 
     async with TheHelperCrawler(headless=True) as crawler:
         print("\n[Phase 1] Discovering semesters...")
-        semesters = await crawler.discover_semesters()
+        try:
+            semesters = await crawler.discover_semesters()
+        except Exception:
+            semesters = []
+            
         print(f"  Found {len(semesters)} semesters: {semesters}")
 
         for sem in semesters:
+            if run_stats["downloaded"] >= max_downloads:
+                break
+                
             print(f"\n{'='*60}")
             print(f"  SEMESTER {sem}")
             print(f"{'='*60}")
 
-            subjects = await crawler.discover_subjects(sem)
+            try:
+                subjects = await crawler.discover_subjects(sem)
+            except Exception:
+                continue
+                
             print(f"  Found {len(subjects)} subjects")
 
             for sub_idx, sub in enumerate(subjects):
+                if run_stats["downloaded"] >= max_downloads:
+                    print("Reached max downloads limit.")
+                    break
+                    
                 sub_key = f"sem{sem}/{sub}"
                 print(f"\n  [{sub_idx+1}/{len(subjects)}] {sub}")
 
@@ -65,6 +90,7 @@ async def main():
                 except Exception as e:
                     print(f"    [!] Failed to load subject page: {e}")
                     progress["stats"]["errors"] += 1
+                    run_stats["errors"] += 1
                     save_progress(progress)
                     continue
 
@@ -74,6 +100,9 @@ async def main():
 
                 # Process each resource: discover Drive ID + download immediately
                 for i in range(count):
+                    if run_stats["downloaded"] >= max_downloads:
+                        break
+                        
                     # Re-navigate each time to reset SPA state
                     try:
                         await crawler._load_with_retry(subject_url)
@@ -124,14 +153,17 @@ async def main():
                                 break
                             await asyncio.sleep(0.5)
 
+                        run_stats["discovered"] += 1
+                        progress["stats"]["total_found"] += 1
+                        
                         if not drive_id:
                             print("no Drive link")
                             progress["stats"]["skipped_no_id"] += 1
+                            run_stats["skipped_no_id"] += 1
                             save_progress(progress)
                             continue
 
                         # Download immediately
-                        progress["stats"]["total_found"] += 1
                         file_url = f"https://drive.google.com/uc?id={drive_id}&export=download"
                         safe_filename = "".join([c if c.isalnum() or c in "._- " else "_" for c in title]).strip() + ".pdf"
 
@@ -147,25 +179,26 @@ async def main():
 
                         progress["completed"].append(res_key)
                         progress["stats"]["downloaded"] += 1
+                        run_stats["downloaded"] += 1
                         save_progress(progress)
 
                     except Exception as e:
                         print(f"ERROR: {e}")
                         progress["stats"]["errors"] += 1
+                        run_stats["errors"] += 1
                         save_progress(progress)
 
-    stats = progress["stats"]
     print(f"\n{'='*60}")
-    print(f"  SCRAPE COMPLETE")
+    print(f"  SCRAPE RUN COMPLETE")
     print(f"{'='*60}")
-    print(f"  Total resources found:   {stats['total_found']}")
-    print(f"  Successfully downloaded: {stats['downloaded']}")
-    print(f"  Skipped (no Drive ID):   {stats['skipped_no_id']}")
-    print(f"  Errors:                  {stats['errors']}")
+    print(f"  New resources found:     {run_stats['discovered']}")
+    print(f"  Successfully downloaded: {run_stats['downloaded']}")
+    print(f"  Errors during run:       {run_stats['errors']}")
     print(f"{'='*60}")
+    return run_stats
 
 
 if __name__ == "__main__":
     if sys.platform == "win32":
         asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
-    asyncio.run(main())
+    asyncio.run(run_scrape(max_downloads=5))

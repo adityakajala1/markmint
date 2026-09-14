@@ -50,6 +50,16 @@ The backtester validates predictive accuracy by holding out historical years (e.
 python scripts/backtest.py
 ```
 
+### 5. Automated Sync (Cron/Scheduler)
+
+The `sync_pipeline.py` script orchestrates the full lifecycle for periodic automated updates. It bounds execution scope (e.g., max 50 downloads, 100 ingestions) to ensure safety and avoid infinite retries on failed resources. It also maintains idempotency, preventing duplicates.
+
+```bash
+python scripts/sync_pipeline.py
+```
+
+It records detailed logs including `start_time`, `end_time`, `discovered`, `downloaded`, `processed`, `failures`, and `db_changes` to `data/logs/sync_history.jsonl`.
+
 ## Production Guidelines
 
 - **NEVER** run scraping logic in a web request handler.

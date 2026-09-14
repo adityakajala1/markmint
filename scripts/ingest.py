@@ -28,13 +28,21 @@ def categorize(filename):
     return 'study material / other'
 
 
-def process_downloads():
-    print("Starting Ingestion Feeder...")
+def process_downloads(max_files: int = 50):
+    print(f"Starting Ingestion Feeder (Max files: {max_files})...")
+    
+    stats = {
+        "discovered": 0,
+        "processed": 0,
+        "failed": 0,
+        "skipped": 0
+    }
+    
     db_path = "data/.download_cache/downloads.db"
     
     if not os.path.exists(db_path):
         print(f"Cache DB not found at {db_path}. Is the scraper running?")
-        return
+        return stats
 
     # Ensure db tables exist
     try:
@@ -55,12 +63,14 @@ def process_downloads():
         conn.commit()
 
     # Get unprocessed PDFs
-    cursor.execute("SELECT id, local_path, source_metadata, sha256 FROM downloads WHERE processed = 0 AND local_path LIKE '%.pdf'")
+    cursor.execute("SELECT id, local_path, source_metadata, sha256 FROM downloads WHERE processed = 0 AND local_path LIKE '%.pdf' LIMIT ?", (max_files,))
     unprocessed = cursor.fetchall()
+    
+    stats["discovered"] = len(unprocessed)
     
     if not unprocessed:
         print("No new unprocessed PDFs found in the scraper cache.")
-        return
+        return stats
         
     print(f"Found {len(unprocessed)} unprocessed PDFs. Feeding into ExamScope Engine...")
     
@@ -72,6 +82,9 @@ def process_downloads():
         
         if not os.path.exists(local_path):
             print(f"File missing: {local_path}")
+            stats["skipped"] += 1
+            cursor.execute("UPDATE downloads SET processed = 2 WHERE id = ?", (row_id,))
+            conn.commit()
             continue
             
         # Parse metadata
@@ -119,8 +132,16 @@ def process_downloads():
             with open(local_path, "rb") as f:
                 pages_data = PDFParser.extract_text_with_pages(f)
             
+            if not pages_data:
+                print("  [!] Document is empty or unreadable.")
+                stats["failed"] += 1
+                cursor.execute("UPDATE downloads SET processed = 2 WHERE id = ?", (row_id,))
+                conn.commit()
+                continue
+            
             # Route to correct extraction logic based on resource_type
             is_exam = resource_type in ['examination papers / PYQs', 'CT papers']
+            is_syllabus = resource_type == 'syllabi'
             
             if is_exam:
                 print(f"  [>] Running Exam Question Extractor...")
@@ -128,7 +149,8 @@ def process_downloads():
                 
                 if not result.successful:
                     print(f"  [!] Extraction failed: {result.error_message}")
-                    cursor.execute("UPDATE downloads SET processed = 1 WHERE id = ?", (row_id,))
+                    stats["failed"] += 1
+                    cursor.execute("UPDATE downloads SET processed = 2 WHERE id = ?", (row_id,))
                     conn.commit()
                     continue
                     
@@ -140,13 +162,15 @@ def process_downloads():
                     extraction_data=result.model_dump()
                 )
                 print(f"  [+] Ingested {len(result.sections)} sections as EXAM")
-            else:
+                stats["processed"] += 1
+            elif not is_syllabus:
                 print(f"  [>] Running Study Material Knowledge Extractor...")
                 result = KnowledgeExtractor.extract(pages_data)
                 
                 if not result.successful:
                     print(f"  [!] Extraction failed: {result.error_message}")
-                    cursor.execute("UPDATE downloads SET processed = 1 WHERE id = ?", (row_id,))
+                    stats["failed"] += 1
+                    cursor.execute("UPDATE downloads SET processed = 2 WHERE id = ?", (row_id,))
                     conn.commit()
                     continue
                     
@@ -155,6 +179,9 @@ def process_downloads():
                     extraction_data=result.model_dump()
                 )
                 print(f"  [+] Ingested {len(result.concepts)} concepts as KNOWLEDGE")
+                stats["processed"] += 1
+            else:
+                stats["processed"] += 1
             
             # Mark processed
             cursor.execute("UPDATE downloads SET processed = 1 WHERE id = ?", (row_id,))
@@ -162,12 +189,15 @@ def process_downloads():
             
         except Exception as e:
             print(f"  [!] ERROR processing {local_path}: {e}")
+            stats["failed"] += 1
             cursor.execute("UPDATE downloads SET processed = 2 WHERE id = ?", (row_id,))
             conn.commit()
+            db.rollback()
             
     print("\nFeeder finished batch.")
     db.close()
     conn.close()
+    return stats
 
 if __name__ == "__main__":
-    process_downloads()
+    process_downloads(max_files=5)
