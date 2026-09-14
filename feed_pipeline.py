@@ -3,6 +3,8 @@ import sqlite3
 import json
 import sys
 
+os.environ['DATABASE_URL'] = 'sqlite:///./demo.db'
+
 from sqlalchemy.exc import OperationalError
 from app.core.database import SessionLocal, Base, engine
 from app.models.core import Course, Topic, Exam, Section, Question
@@ -116,5 +118,8 @@ def process_downloads():
     db.close()
     conn.close()
 
+import time
 if __name__ == "__main__":
-    process_downloads()
+    while True:
+        process_downloads()
+        time.sleep(10)

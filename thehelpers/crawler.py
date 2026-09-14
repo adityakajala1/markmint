@@ -152,35 +152,73 @@ class TheHelperCrawler:
         return unique
 
     async def discover_resources(self, semester: int, subject: str) -> List[DiscoveredResource]:
-        encoded = quote(subject.replace(" ", "-").lower(), safe="")
-        url = f"{BASE_URL}/semesters/{semester}/subjects/{encoded}"
-        await self._load_with_retry(url)
-        content = await self.page.content()
-        parsed = parse_subject_page(content)
-
+        import re
+        encoded = quote(subject)
+        subject_url = f"{BASE_URL}/semesters/{semester}/subjects/{encoded}"
+        
+        # Load the page first to count resources
+        await self._load_with_retry(subject_url)
+        await asyncio.sleep(4)
+        
+        containers = await self.page.locator("div.flex.items-center.justify-between:has(button:has-text('View'))").all()
+        count = len(containers)
+        logger.info("Semester %d / %s: discovered %d resources", semester, subject, count)
+        
         resources: List[DiscoveredResource] = []
-        for item in parsed:
-            title = item.get("title", "").strip()
-            href = item.get("url", "").strip()
-            section = item.get("section", "Other")
-            if not title or not href:
-                continue
-            # Resolve to full URL
-            full_url = normalize_url(href, base_url=BASE_URL)
-            res = DiscoveredResource(
-                title=title,
-                source_url=full_url,
-                semester=str(semester),
-                subject=subject,
-                resource_type=None,
-            )
-            resources.append(res)
-
+        
+        for i in range(count):
+            logger.info("Processing resource %d/%d for %s", i+1, count, subject)
+            # Re-navigate to reset DOM state completely to avoid Next.js SPA stale state issues
+            await self._load_with_retry(subject_url)
+            await asyncio.sleep(4)
+            
+            try:
+                container = self.page.locator("div.flex.items-center.justify-between:has(button:has-text('View'))").nth(i)
+                title = await container.locator("span.text-muted-foreground").inner_text()
+                button = container.locator("button:has-text('View')")
+                
+                # Click forcefully bypassing any ad overlays
+                await button.click(force=True)
+                
+                # Wait for the file-viewer route to be loaded and Drive iframe to appear
+                await asyncio.sleep(4)
+                
+                drive_id = None
+                for _ in range(10): # retry for 5 seconds
+                    for f in self.page.frames:
+                        # Look for '?id=' or '&id=' or urlencoded variants
+                        match = re.search(r'(?:[?&]id=|%3Fid%3D|%26id%3D)([A-Za-z0-9_-]{25,})', f.url)
+                        if match:
+                            drive_id = match.group(1)
+                            break
+                    if drive_id:
+                        break
+                    await asyncio.sleep(0.5)
+                
+                if drive_id:
+                    direct_url = f"https://drive.google.com/uc?id={drive_id}&export=download"
+                    res = DiscoveredResource(
+                        title=title.strip(),
+                        source_url=direct_url,
+                        semester=str(semester),
+                        subject=subject,
+                        resource_type=None,
+                    )
+                    resources.append(res)
+                    logger.info("Found drive ID for '%s': %s", title, drive_id)
+                else:
+                    logger.warning("No Drive ID found for '%s'", title)
+                    
+            except Exception as e:
+                logger.error("Error processing resource %d: %s", i, e)
+                
         self.stats["resources_discovered"] += len(resources)
-        logger.info("Semester %d / %s: discovered %d resources", semester, subject, len(resources))
         return resources
 
     async def get_resource_file_url(self, resource_page_url: str) -> Optional[str]:
+        if "drive.google.com/uc" in resource_page_url:
+            return resource_page_url
+            
         await self._load_with_retry(resource_page_url)
         content = await self.page.content()
         # Look for Google Drive links
@@ -220,3 +258,4 @@ class TheHelperCrawler:
 
     def report_stats(self) -> Dict[str, Any]:
         return self.stats.copy()
+

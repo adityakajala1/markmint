@@ -18,9 +18,9 @@ async def main():
         semesters = await crawler.discover_semesters()
         print(f"Found semesters: {semesters}")
         
-        for sem in semesters:
+        for sem in [1]:
             print(f"\n--- Scraping Semester {sem} ---")
-            subjects = await crawler.discover_subjects(sem)
+            subjects = ["Calculus And Linear Algebra"]
             print(f"Found subjects: {subjects}")
             
             for sub in subjects:
