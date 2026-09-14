@@ -29,7 +29,7 @@ async def main():
                 print(f"    Discovered {len(resources)} resources.")
                 
                 for res in resources:
-                    print(f"      Resource: {res.title}")
+                    print(f"      Resource: {res.title.encode('ascii', 'replace').decode('ascii')}")
                     try:
                         # 1. Ask crawler to find the actual download URL (e.g., GDrive link or direct PDF)
                         file_url = await crawler.get_resource_file_url(res.source_url)
@@ -59,4 +59,5 @@ if __name__ == "__main__":
     if sys.platform == "win32":
         asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
     asyncio.run(main())
+
 
