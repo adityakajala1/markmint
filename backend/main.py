@@ -1,11 +1,12 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from backend.core.config import settings
+from backend.core.config import settings, Environment
 from backend.api.router import api_router
 from backend.core.database import engine, Base
 
-# Create all tables in the database
-Base.metadata.create_all(bind=engine)
+# Create all tables in the database ONLY if not in production
+if settings.ENVIRONMENT != Environment.PRODUCTION:
+    Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title=settings.PROJECT_NAME)
 
