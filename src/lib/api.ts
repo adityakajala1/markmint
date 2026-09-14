@@ -30,7 +30,17 @@ export async function getExamPredictions(id: string | number) {
   return fetchAPI(`/exams/${id}/predictions`);
 }
 
-// Mock functions for ExamDNA Dashboard charts
+// Mocks for Dashboard and Course pages
+export async function getDashboardStats() { return null; }
+export async function getTopicFrequencies() { return []; }
+export async function getMarksDistribution(courseId?: string) { return []; }
+export async function getUnitDistribution() { return []; }
+export async function getQuestionTypes() { return []; }
+
+export async function getTopicFrequency(courseId: string) { return []; }
+export async function getCourseInfo(courseId: string) { return getCourse(courseId); }
+export async function getQuestions(params: { courseId: string }) { return { items: [], total: 0 }; }
+
 export async function getHeatmapData(courseId: string) { return []; }
 export async function getHistoricalTrends(courseId: string) { return []; }
 export async function getMarksPattern(courseId: string) { return []; }

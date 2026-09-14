@@ -1,11 +1,11 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Dna, Menu } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export function Navbar() {
+export function Navbar({ onMenuClick }: { onMenuClick?: () => void }) {
   const pathname = usePathname();
 
   const links = [
@@ -43,7 +43,7 @@ export function Navbar() {
           })}
         </nav>
         <div className="md:hidden ml-auto">
-          <button className="p-2 text-foreground/70 hover:text-primary transition-colors">
+          <button onClick={onMenuClick} className="p-2 text-foreground/70 hover:text-primary transition-colors">
             <Menu className="h-6 w-6" />
           </button>
         </div>
