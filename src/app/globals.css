@@ -1,41 +1,57 @@
+@custom-variant dark (&:where(.dark, .dark *));
 @import "tailwindcss";
 
 @theme inline {
-  --color-background: #E9E8E1;
-  --color-foreground: #0F3D2E;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
   
-  --color-card: #F7F6F2;
-  --color-card-foreground: #0F3D2E;
+  --color-card: var(--card);
+  --color-card-foreground: var(--foreground);
   
-  --color-popover: #F7F6F2;
-  --color-popover-foreground: #0F3D2E;
+  --color-popover: var(--card);
+  --color-popover-foreground: var(--foreground);
   
   --color-primary: #006838;
-  --color-primary-foreground: #E9E8E1;
+  --color-primary-foreground: #F3F0E8;
   
-  --color-secondary: #E9E8E1;
-  --color-secondary-foreground: #0F3D2E;
+  --color-secondary: var(--card);
+  --color-secondary-foreground: var(--foreground);
   
-  --color-muted: #D7D4CB;
-  --color-muted-foreground: #4A6B5D;
+  --color-muted: var(--card);
+  --color-muted-foreground: var(--muted);
   
   --color-accent: #E6327A;
-  --color-accent-foreground: #F7F6F2;
+  --color-accent-foreground: #F3F0E8;
   
   --color-destructive: #E6327A;
-  --color-destructive-foreground: #F7F6F2;
+  --color-destructive-foreground: #F3F0E8;
   
-  --color-border: #D7D4CB;
-  --color-input: #D7D4CB;
+  --color-border: var(--border);
+  --color-input: var(--border);
   --color-ring: #006838;
   
-  --color-success: #006838;
-  --color-warning: #f59e0b;
-  
-  --radius-lg: 1rem;
+  --radius-lg: 1.5rem;
   --radius-xl: 1.5rem;
+  
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+}
+
+:root {
+  --background: #E9E8E1;
+  --foreground: #123327;
+  --card: #F7F6F2;
+  --muted: #4A5F58;
+  --border: rgba(18, 51, 39, 0.1);
+}
+
+.dark {
+  color-scheme: dark;
+  --background: #0B1110;
+  --foreground: #F3F0E8;
+  --card: #111917;
+  --muted: #A9B1AE;
+  --border: rgba(255, 255, 255, 0.08);
 }
 
 * {
@@ -43,8 +59,77 @@
 }
 
 body {
-  background-color: var(--color-background);
-  color: var(--color-foreground);
+  background-color: var(--background);
+  color: var(--foreground);
   font-family: var(--font-sans), system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+#nextjs-portal,
+nextjs-portal,
+[data-nextjs-toast],
+.nextjs-toast,
+[class^="nextjs-"],
+#vercel-toolbar {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px) rotate(-5deg); }
+  50% { transform: translateX(5px) rotate(5deg); }
+  75% { transform: translateX(-5px) rotate(-5deg); }
+}
+.animate-shake {
+  animation: shake 0.4s ease-in-out;
+}
+@media print {
+  nav, footer, .no-print, #nextjs-portal, .nextjs-toast, [data-nextjs-toast] {
+    display: none !important;
+  }
+  body {
+    background-color: white !important;
+    color: black !important;
+  }
+  * {
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+}
+
+/* Simple loading fade-in for pages (#6) */
+@keyframes fadeInPage {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.page-load-animate {
+  animation: fadeInPage 0.4s ease-out forwards;
+}
+
+/* Add custom focus styles for skip to content */
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 0;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  padding: 8px;
+  z-index: 100;
+  transition: top 0.2s;
+}
+.skip-link:focus {
+  top: 0;
+}
+
+@keyframes pageFadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-page-enter {
+  animation: pageFadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }

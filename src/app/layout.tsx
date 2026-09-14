@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "sonner";
+import { GlobalFeatures } from "@/components/ui/GlobalFeatures";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -13,23 +14,38 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+import { ThemeProvider } from "@/components/theme-provider";
+import { EasterEggManager } from "@/components/ambient/EasterEggManager";
+
 export const metadata: Metadata = {
-  title: "ExamScope — Reverse-engineering the way exams are made",
-  description:
-    "An exam pattern analysis platform that reverse-engineers previous year papers and shows students how a course is historically examined.",
+  title: "MarkMint | Predict exams & track GPA for SRMIST",
+  description: "MintAi predicts your CT, FT, and End Sem question papers. Calculate your GPA instantly for 40+ engineering branches.",
+  openGraph: {
+    title: "MarkMint | SRMIST AI Assistant",
+    description: "Generate structured study plans, filter PYQs, and predict exams with MintAi.",
+    url: "https://markmint.com",
+    siteName: "MarkMint",
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "MarkMint | SRMIST AI Assistant",
+    description: "MintAi predicts your CT, FT, and End Sem question papers.",
+  }
 };
 
 export default function RootLayout({
   children,
-}: {
+}: Readonly<{
   children: React.ReactNode;
-}) {
+}>) {
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`} suppressHydrationWarning
     >
-      <body className="min-h-full flex flex-col bg-background text-foreground">
+      <body className="min-h-full flex flex-col bg-background text-foreground relative">        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
         {children}
         <Toaster
           theme="dark"
@@ -42,6 +58,9 @@ export default function RootLayout({
             },
           }}
         />
+        <EasterEggManager />
+        <GlobalFeatures />
+      </ThemeProvider>
       </body>
     </html>
   );
