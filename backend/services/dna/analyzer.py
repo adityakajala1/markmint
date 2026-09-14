@@ -73,11 +73,15 @@ class DNAAnalyzerService:
             for e in sorted_exams if e.get("year") in recent_years_set 
             for q in e.get("questions", []) if not q.get("is_alternative")
         )
+        recent_total_questions = sum(
+            1 for e in sorted_exams if e.get("year") in recent_years_set 
+            for q in e.get("questions", [])
+        )
         
         topics_data: dict[str, Any] = defaultdict(lambda: {
             "q_count": 0, "marks": 0.0, "papers": set(), 
             "long_ans": 0, "short_ans": 0, "recent_q_count": 0,
-            "diffs": []
+            "diffs": [], "non_alt_q_count": 0
         })
         units_data: dict[str, Any] = defaultdict(lambda: {
             "q_count": 0, "marks": 0.0, "papers": set(), "recent_marks": 0.0
@@ -100,13 +104,16 @@ class DNAAnalyzerService:
             
             for q in exam.get("questions", []):
                 m = q.get("marks") or 0.0
+                is_alt = q.get("is_alternative", False)
                 
                 # Topics
                 topic = q.get("topic")
                 if topic:
                     td = topics_data[topic]
                     td["q_count"] += 1
-                    td["marks"] += m
+                    if not is_alt:
+                        td["marks"] += m
+                        td["non_alt_q_count"] += 1
                     td["papers"].add(exam_id)
                     if m >= 5.0: td["long_ans"] += 1
                     if m <= 3.0: td["short_ans"] += 1
@@ -119,15 +126,17 @@ class DNAAnalyzerService:
                 if unit:
                     ud = units_data[unit]
                     ud["q_count"] += 1
-                    ud["marks"] += m
+                    if not is_alt:
+                        ud["marks"] += m
+                        if is_recent: ud["recent_marks"] += m
                     ud["papers"].add(exam_id)
-                    if is_recent: ud["recent_marks"] += m
                     
                 # Question Types
                 qtype = q.get("question_type")
                 if qtype:
                     qtypes_data[qtype]["count"] += 1
-                    qtypes_data[qtype]["marks"] += m
+                    if not is_alt:
+                        qtypes_data[qtype]["marks"] += m
                     
                 # Repetition Types
                 rep = q.get("repetition_type")
@@ -143,7 +152,8 @@ class DNAAnalyzerService:
                     fd["occurrences"] += 1
                     if exam_year: fd["years"].add(exam_year)
                     if exam_type: fd["exam_types"].add(exam_type)
-                    fd["marks"].append(m)
+                    if not is_alt:
+                        fd["marks"].append(m)
                     if is_recent: fd["recent_count"] += 1
 
         # 3. Compile DTOs
@@ -156,7 +166,7 @@ class DNAAnalyzerService:
                 elif d < 0.7: diff_dist["0.3-0.7"] += 1
                 else: diff_dist["0.7-1.0"] += 1
                 
-            recent_freq = td["recent_q_count"] / total_questions if total_questions > 0 else 0
+            recent_freq = td["recent_q_count"] / recent_total_questions if recent_total_questions > 0 else 0
             hist_freq = td["q_count"] / total_questions if total_questions > 0 else 0
             
             topics_dna.append(TopicDNA(
@@ -164,9 +174,9 @@ class DNAAnalyzerService:
                 question_count=td["q_count"],
                 paper_coverage=len(td["papers"]) / total_exams,
                 total_marks=td["marks"],
-                average_marks=td["marks"] / td["q_count"],
-                long_answer_frequency=td["long_ans"] / td["q_count"],
-                short_answer_frequency=td["short_ans"] / td["q_count"],
+                average_marks=td["marks"] / td["non_alt_q_count"] if td["non_alt_q_count"] > 0 else 0,
+                long_answer_frequency=td["long_ans"] / td["q_count"] if td["q_count"] > 0 else 0,
+                short_answer_frequency=td["short_ans"] / td["q_count"] if td["q_count"] > 0 else 0,
                 recent_frequency=recent_freq,
                 historical_frequency=hist_freq,
                 difficulty_distribution=diff_dist
