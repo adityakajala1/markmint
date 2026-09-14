@@ -3,15 +3,17 @@ import sqlite3
 import json
 import sys
 
-os.environ['DATABASE_URL'] = 'sqlite:///./demo.db'
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+os.environ.setdefault('ENVIRONMENT', 'production')
 
 from sqlalchemy.exc import OperationalError
-from app.core.database import SessionLocal, Base, engine
-from app.models.core import Course
-from app.services.extraction.pdf_parser import PDFParser
-from app.services.extraction.question_extractor import QuestionExtractor
-from app.services.extraction.knowledge_extractor import KnowledgeExtractor
-from app.services.document import DocumentService
+from backend.core.database import SessionLocal, Base, engine
+from backend.models.core import Course
+from backend.services.extraction.pdf_parser import PDFParser
+from backend.services.extraction.question_extractor import QuestionExtractor
+from backend.services.extraction.knowledge_extractor import KnowledgeExtractor
+from backend.services.document import DocumentService
 
 
 def categorize(filename):
@@ -167,8 +169,5 @@ def process_downloads():
     db.close()
     conn.close()
 
-import time
 if __name__ == "__main__":
-    while True:
-        process_downloads()
-        time.sleep(10)
+    process_downloads()

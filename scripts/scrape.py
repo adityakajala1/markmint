@@ -4,11 +4,11 @@ import sys
 import json
 import time
 
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from app.services.scraper.crawler import TheHelperCrawler
-from app.services.scraper.downloader import ResourceDownloader
-import app.services.scraper.downloader as dl_module
+from backend.services.scraper.crawler import TheHelperCrawler
+from backend.services.scraper.downloader import ResourceDownloader
+import backend.services.scraper.downloader as dl_module
 
 PROGRESS_FILE = "data/.download_cache/scrape_progress.json"
 
