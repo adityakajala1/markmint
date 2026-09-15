@@ -228,13 +228,13 @@ function IDCard({ dev, index }: { dev: Developer; index: number }) {
                 // TURN OFF LOGIC
                 document.documentElement.classList.remove('theme-high');
                 document.body.classList.add('smoke-clearing');
-                setTimeout(() => document.body.classList.remove('smoke-clearing'), 2000);
-                
-                const cough = new Audio("/cough.mp3");
-                cough.volume = 0.6;
-                cough.play().catch(e => console.log("Audio blocked", e));
-                
-                toast("Too strong? Back to normal.", { icon: "😮‍💨" });
+                setTimeout(() => {
+                  document.body.classList.remove('smoke-clearing');
+                  const cough = new Audio("/cough.mp3");
+                  cough.volume = 0.6;
+                  cough.play().catch(e => console.log("Audio blocked", e));
+                  toast("Too strong? Back to normal.", { icon: "😮‍💨" });
+                }, 2000);
               } else {
                 // TURN ON LOGIC
                 document.documentElement.classList.add('theme-high');
@@ -250,13 +250,13 @@ function IDCard({ dev, index }: { dev: Developer; index: number }) {
                   if (document.documentElement.classList.contains('theme-high')) {
                     document.documentElement.classList.remove('theme-high');
                     document.body.classList.add('smoke-clearing');
-                    setTimeout(() => document.body.classList.remove('smoke-clearing'), 2000);
-                    
-                    const cough = new Audio("/cough.mp3");
-                    cough.volume = 0.6;
-                    cough.play().catch(e => {});
-                    
-                    toast("Too strong? Back to normal.", { icon: "😮‍💨" });
+                    setTimeout(() => {
+                      document.body.classList.remove('smoke-clearing');
+                      const cough = new Audio("/cough.mp3");
+                      cough.volume = 0.6;
+                      cough.play().catch(e => {});
+                      toast("Too strong? Back to normal.", { icon: "😮‍💨" });
+                    }, 2000);
                   }
                 }, 15000);
               }
