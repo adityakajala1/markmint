@@ -39,8 +39,35 @@ export async function getExamDNA(course_id: string | number) {
   return fetchAPI(`/analysis/dna?course_id=${course_id}`);
 }
 
-export async function getStudyPlan(subject: string) {
-  return fetchAPI(`/study/${subject}`);
+export async function getStudyPriorities(course_name: string) {
+  return fetchAPI(`/study/priorities/${course_name}`);
+}
+
+export async function getStudyPlan(course_name: string) {
+  return fetchAPI(`/study/plan/${course_name}`);
+}
+
+export async function getStudyResources(course_name: string, topic_name: string) {
+  return fetchAPI(`/study/resources/${course_name}/${topic_name}`);
+}
+
+export async function uploadStudyNotes(formData: FormData) {
+  const res = await fetch(`${API_BASE}/study/uploads`, {
+    method: "POST",
+    body: formData,
+  });
+  if (!res.ok) {
+    throw new Error(`Upload failed: ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function updateStudyProgress(course_id: string, data: any) {
+  return fetchAPI(`/study/progress/${course_id}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
 }
 
 export async function getPractice(subject: string) {

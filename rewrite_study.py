@@ -1,4 +1,4 @@
-"use client";
+code = '''"use client";
 
 import { useState, useEffect, useRef } from "react";
 import { Navbar } from "@/components/layout/navbar";
@@ -241,11 +241,7 @@ export default function StudyIntelligencePage() {
                       <div>
                         <h4 className="text-lg font-bold text-foreground mb-1">{topic.name || 'Unknown Topic'}</h4>
                         <div className="flex items-center gap-2 text-xs font-medium">
-                          <span className={`px-2 py-0.5 rounded-sm ${
-                            topic.priority?.toLowerCase() === 'high' ? 'bg-accent/20 text-accent' : 
-                            topic.priority?.toLowerCase() === 'medium' ? 'bg-primary/20 text-primary' : 
-                            'bg-muted/20 text-muted-foreground'
-                          }`}>
+                          <span className={\px-2 py-0.5 rounded-sm \\}>
                             {topic.priority || 'Medium'} Priority
                           </span>
                         </div>
@@ -275,7 +271,7 @@ export default function StudyIntelligencePage() {
                                 <a 
                                   href={res.url || '#'} 
                                   target="_blank"
-                                  onClick={() => handleResourceClick(topic.name, res.id || `res-${ridx}`)}
+                                  onClick={() => handleResourceClick(topic.name, res.id || \es-\\)}
                                   className="text-sm font-medium hover:text-primary transition-colors truncate"
                                 >
                                   {res.title || 'Study Material'}
@@ -391,3 +387,6 @@ export default function StudyIntelligencePage() {
     </div>
   );
 }
+'''
+with open('src/app/study-plan/page.tsx', 'w', encoding='utf-8') as f:
+    f.write(code)
