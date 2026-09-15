@@ -32,24 +32,37 @@ def migrate(source_url: str, target_url: str):
     source_session = SourceSession()
     target_session = TargetSession()
     
-    # Idempotency check: if target already has courses, skip
+    # Idempotency check: verify if the database is already fully populated
     try:
-        target_count = target_session.execute(text("SELECT COUNT(*) FROM courses")).scalar()
-        if target_count and target_count > 0:
-            print("Idempotency Check: Target database is already populated. Skipping migration.")
+        def get_count(table_name):
+            if table_name in target_meta.tables:
+                return target_session.execute(text(f"SELECT COUNT(*) FROM {table_name}")).scalar() or 0
+            return 0
+            
+        c_count = get_count('courses')
+        d_count = get_count('documents')
+        e_count = get_count('exams')
+        q_count = get_count('questions')
+        
+        expected = {'courses': 12, 'documents': 110, 'exams': 8, 'questions': 223}
+        current = {'courses': c_count, 'documents': d_count, 'exams': e_count, 'questions': q_count}
+        
+        if all(count == 0 for count in current.values()):
+            print("Target database is empty. Proceeding with migration...")
+        elif current == expected:
+            print("Idempotency Check: Target database is exactly populated with expected counts. Skipping migration.")
             return
-    except Exception:
+        else:
+            print(f"ERROR: Target database has unexpected partial data: {current}. Expected: {expected} or all 0.")
+            print("Aborting migration to prevent data corruption.")
+            sys.exit(1)
+            
+    except Exception as e:
         target_session.rollback()
+        print(f"Error during idempotency check: {e}")
+        sys.exit(1)
 
     try:
-        if target_engine.dialect.name == 'postgresql':
-            try:
-                target_session.execute(text("SET session_replication_role = 'replica';"))
-            except Exception as e:
-                print("Warning: Could not set session_replication_role (this is normal on managed DBs like Render). Continuing...")
-                # The exception causes the transaction to abort in Postgres, so we must rollback before continuing
-                target_session.rollback()
-            
         for table in Base.metadata.sorted_tables:
             table_name = table.name
             print(f"Migrating table: {table_name}...")
@@ -75,12 +88,6 @@ def migrate(source_url: str, target_url: str):
         print(f"\nMigration failed: {e}")
         sys.exit(1)
     finally:
-        if target_engine.dialect.name == 'postgresql':
-            try:
-                target_session.execute(text("SET session_replication_role = 'origin';"))
-                target_session.commit()
-            except:
-                pass
         source_session.close()
         target_session.close()
 

@@ -9,6 +9,6 @@ alembic upgrade head
 
 echo "Populating production database from SQLite backup..."
 # The script is idempotent; it skips if data already exists
-python scripts/migrate_sqlite_to_pg.py sqlite:///./production_corpus.db $DATABASE_URL
+python scripts/migrate_sqlite_to_pg.py sqlite:///./production_corpus.db "$DATABASE_URL"
 
 echo "Build and migration step completed successfully."
