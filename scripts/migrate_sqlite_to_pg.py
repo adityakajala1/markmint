@@ -9,6 +9,10 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 from backend.models.core import Base
 
 def migrate(source_url: str, target_url: str):
+    # Handle postgres:// dialect on Render/Heroku natively
+    if target_url.startswith("postgres://"):
+        target_url = target_url.replace("postgres://", "postgresql://", 1)
+        
     print(f"Source: {source_url}")
     print(f"Target: {target_url}")
     
@@ -30,7 +34,12 @@ def migrate(source_url: str, target_url: str):
     
     try:
         if target_engine.dialect.name == 'postgresql':
-            target_session.execute(text("SET session_replication_role = 'replica';"))
+            try:
+                target_session.execute(text("SET session_replication_role = 'replica';"))
+            except Exception as e:
+                print("Warning: Could not set session_replication_role (this is normal on managed DBs like Render). Continuing...")
+                # The exception causes the transaction to abort in Postgres, so we must rollback before continuing
+                target_session.rollback()
             
         for table in Base.metadata.sorted_tables:
             table_name = table.name
