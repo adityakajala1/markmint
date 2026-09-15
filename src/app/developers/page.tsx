@@ -5,11 +5,13 @@ import { Footer } from "@/components/layout/footer";
 import Link from "next/link";
 import { Leaf, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 
 declare global {
   interface Window {
     leafTimer?: any;
+    coughAudio?: HTMLAudioElement;
+    snoopAudio?: HTMLAudioElement;
   }
 }
 
@@ -159,14 +161,10 @@ function IDCard({ dev, index }: { dev: Developer; index: number }) {
 
   return (
     <div className="flex flex-col items-center pb-8 perspective-[1000px]">
-      {/* Lanyard Strap Assembly */}
-      <div className="flex flex-col items-center z-20 relative translate-y-3">
-        {/* The fabric strap */}
-        <div className="w-6 h-12 bg-muted-foreground/20 rounded-t-sm border-x border-t border-border/30 shadow-inner" />
-        {/* The metal clip */}
-        <div className="w-10 h-6 bg-gradient-to-b from-gray-300 to-gray-400 dark:from-gray-600 dark:to-gray-800 rounded-b-lg border border-border/50 shadow-md flex items-center justify-center">
-          <div className="w-6 h-1 bg-gray-500/50 rounded-full" />
-        </div>
+      {/* Lanyard Strap */}
+      <div className="flex flex-col items-center z-10 relative">
+        <div className="w-8 h-6 bg-muted rounded-t-md border-x border-t border-border/50" />
+        <div className="w-12 h-5 bg-card rounded-b-[10px] border border-border/50 -mt-[1px]" />
       </div>
 
       {/* Card */}
@@ -183,9 +181,6 @@ function IDCard({ dev, index }: { dev: Developer; index: number }) {
       >
         {/* Plastic Glare Overlay */}
         <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-white/20 dark:via-white/[0.02] dark:to-white/10 pointer-events-none z-50 mix-blend-overlay" />
-
-        {/* Slotted Lanyard Hole */}
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 w-16 h-3.5 bg-background rounded-full border border-border/40 shadow-[inset_0_2px_4px_rgba(0,0,0,0.4)] z-50" />
 
         {/* Botanical background pattern */}
         <CardBotanical />
@@ -249,13 +244,6 @@ function IDCard({ dev, index }: { dev: Developer; index: number }) {
               ))}
             </div>
             
-            {/* Holographic authentic seal */}
-            <div className="mt-auto pt-4">
-              <div className="w-10 h-10 rounded-full border border-yellow-500/30 bg-gradient-to-br from-yellow-300 via-amber-500 to-orange-600 opacity-80 flex items-center justify-center shadow-[0_0_15px_rgba(251,191,36,0.2)] mix-blend-hard-light relative overflow-hidden">
-                 <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/40 to-transparent w-[200%] animate-[spin_3s_linear_infinite]" />
-                 <ShieldCheck className="w-5 h-5 text-yellow-900/50" />
-              </div>
-            </div>
           </div>
         </div>
 
@@ -279,59 +267,10 @@ function IDCard({ dev, index }: { dev: Developer; index: number }) {
           </Link>
         </div>
 
-        {/* Footer: Leaf & Barcode */}
-        <div className="relative flex items-end justify-between px-6 py-4 border-t border-border/50 bg-muted/10">
-          <div 
-            className="cursor-pointer group flex items-center justify-center p-2 -ml-2 rounded-full hover:bg-accent/10 transition-colors z-50"
-            onClick={() => {
-              const isHigh = document.documentElement.classList.contains('theme-high');
-              if (window.leafTimer) clearTimeout(window.leafTimer);
-              if (isHigh) {
-                document.documentElement.classList.remove('theme-high');
-                document.body.classList.add('smoke-clearing');
-                
-                // Play cough immediately so it's not late
-                const cough = new Audio("/cough.mp3");
-                cough.volume = 0.6;
-                cough.play().catch(e => console.log("Audio blocked", e));
-                toast("Too strong? Back to normal.", { icon: "😮‍💨" });
-                
-                setTimeout(() => {
-                  document.body.classList.remove('smoke-clearing');
-                }, 2000);
-              } else {
-                document.documentElement.classList.add('theme-high');
-                const audio = new Audio("/snoop.mp3");
-                audio.volume = 0.8;
-                audio.play().catch(e => console.log("Audio play blocked", e));
-                toast.success("High Mode Activated 🌿", { icon: "🔥" });
-                window.leafTimer = setTimeout(() => {
-                  if (document.documentElement.classList.contains('theme-high')) {
-                    document.documentElement.classList.remove('theme-high');
-                    document.body.classList.add('smoke-clearing');
-                    
-                    const cough = new Audio("/cough.mp3");
-                    cough.volume = 0.6;
-                    cough.play().catch(e => {});
-                    toast("Too strong? Back to normal.", { icon: "😮‍💨" });
-                    
-                    setTimeout(() => {
-                      document.body.classList.remove('smoke-clearing');
-                    }, 2000);
-                  }
-                }, 15000);
-              }
-            }}
-          >
-            <img 
-              src="/secret-leaf.png" 
-              alt="Secret Leaf" 
-              className="w-7 h-7 opacity-80 group-hover:opacity-100 group-hover:scale-110 group-hover:rotate-12 group-active:scale-95 transition-all duration-300 dark:brightness-110" 
-            />
-          </div>
-          <div className="flex flex-col items-end gap-1">
+        {/* Footer: Barcode */}
+        <div className="relative flex justify-end px-6 py-4 border-t border-border/50 bg-muted/10">
+          <div className="flex flex-col items-end">
             <RealisticBarcode />
-            <span className="text-[10px] font-mono font-semibold tracking-widest text-muted-foreground/60">{dev.id}</span>
           </div>
         </div>
       </div>
@@ -339,9 +278,82 @@ function IDCard({ dev, index }: { dev: Developer; index: number }) {
   );
 }
 
+function FloatingLeaf() {
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const cough = new Audio("/cough.mp3");
+      cough.preload = "auto";
+      window.coughAudio = cough;
+      
+      const snoop = new Audio("/snoop.mp3");
+      snoop.preload = "auto";
+      window.snoopAudio = snoop;
+    }
+  }, []);
+
+  const handleLeafClick = () => {
+    const isHigh = document.documentElement.classList.contains('theme-high');
+    if (window.leafTimer) clearTimeout(window.leafTimer);
+    
+    if (isHigh) {
+      document.documentElement.classList.remove('theme-high');
+      document.body.classList.add('smoke-clearing');
+      
+      if (window.coughAudio) {
+        window.coughAudio.currentTime = 0;
+        window.coughAudio.volume = 0.6;
+        window.coughAudio.play().catch(e => console.log(e));
+      } else {
+        new Audio("/cough.mp3").play().catch(e => {});
+      }
+      toast("Too strong? Back to normal.", { icon: "😮‍💨" });
+      
+      setTimeout(() => document.body.classList.remove('smoke-clearing'), 2000);
+    } else {
+      document.documentElement.classList.add('theme-high');
+      
+      if (window.snoopAudio) {
+        window.snoopAudio.currentTime = 0;
+        window.snoopAudio.volume = 0.8;
+        window.snoopAudio.play().catch(e => console.log(e));
+      } else {
+        new Audio("/snoop.mp3").play().catch(e => {});
+      }
+      toast.success("High Mode Activated 🌿", { icon: "🔥" });
+      
+      window.leafTimer = setTimeout(() => {
+        if (document.documentElement.classList.contains('theme-high')) {
+          document.documentElement.classList.remove('theme-high');
+          document.body.classList.add('smoke-clearing');
+          
+          if (window.coughAudio) {
+            window.coughAudio.currentTime = 0;
+            window.coughAudio.volume = 0.6;
+            window.coughAudio.play().catch(e => {});
+          }
+          toast("Too strong? Back to normal.", { icon: "😮‍💨" });
+          
+          setTimeout(() => document.body.classList.remove('smoke-clearing'), 2000);
+        }
+      }, 15000);
+    }
+  };
+
+  return (
+    <div className="floating-leaf-anim group" onClick={handleLeafClick}>
+      <img 
+        src="/secret-leaf.png" 
+        alt="Secret Leaf" 
+        className="w-10 h-10 opacity-60 hover:opacity-100 hover:scale-110 drop-shadow-lg transition-all duration-300 dark:brightness-110" 
+      />
+    </div>
+  );
+}
+
 export default function DevelopersPage() {
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground selection:bg-accent/20">
+      <FloatingLeaf />
       <Navbar />
 
       <main className="flex-1 w-full max-w-7xl mx-auto px-6 md:px-10 pt-12 pb-32">

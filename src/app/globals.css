@@ -154,3 +154,22 @@ nextjs-portal,
 .smoke-clearing {
   animation: smokeClear 2s ease-out forwards;
 }
+
+@keyframes leafFloat {
+  0% { transform: translate(0, -10vh) rotate(0deg); opacity: 0; }
+  10% { opacity: 0.7; }
+  25% { transform: translate(15vw, 25vh) rotate(45deg); }
+  50% { transform: translate(-10vw, 50vh) rotate(-30deg); }
+  75% { transform: translate(10vw, 75vh) rotate(60deg); opacity: 0.7; }
+  90% { opacity: 0; }
+  100% { transform: translate(-15vw, 110vh) rotate(-90deg); opacity: 0; }
+}
+
+.floating-leaf-anim {
+  position: fixed;
+  top: 0;
+  left: 30%;
+  animation: leafFloat 20s ease-in-out infinite;
+  z-index: 50;
+  cursor: pointer;
+}
