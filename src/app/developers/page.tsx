@@ -216,9 +216,9 @@ function IDCard({ dev, index }: { dev: Developer; index: number }) {
               // Toggle High Mode (Theme shift)
               document.documentElement.classList.toggle('theme-high');
               
-              // Play lighter click / puff sound
-              const audio = new Audio("https://actions.google.com/sounds/v1/foley/lighter_flick.ogg");
-              audio.volume = 0.5;
+              // Play Snoop Dogg sound
+              const audio = new Audio("/snoop.mp3");
+              audio.volume = 0.8;
               audio.play().catch(e => console.log("Audio play blocked", e));
               
               // Auto-revert after 15 seconds if they turned it on
