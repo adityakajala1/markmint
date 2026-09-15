@@ -25,29 +25,33 @@ class Settings(BaseSettings):
 
     @property
     def get_database_url(self) -> str:
+        url = self.DATABASE_URL
+        if url and url.startswith("postgres://"):
+            url = url.replace("postgres://", "postgresql://", 1)
+            
         if self.ENVIRONMENT == Environment.PRODUCTION:
-            if not self.DATABASE_URL:
+            if not url:
                 raise ValueError("DATABASE_URL must be explicitly provided in PRODUCTION environment.")
-            if self.DATABASE_URL.startswith("sqlite"):
+            if url.startswith("sqlite"):
                 # Temporarily bypass for the agentic sandbox if it's specifically requested to run the report locally
                 if os.getenv("BYPASS_SQLITE_CHECK") != "true":
                     raise ValueError("SQLite is not allowed in PRODUCTION.")
             
             # Enforce SSL for managed PostgreSQL providers (AWS, Heroku, Supabase, etc.)
-            if self.DATABASE_URL.startswith("postgres") and "sslmode=" not in self.DATABASE_URL:
-                if "?" in self.DATABASE_URL:
-                    return f"{self.DATABASE_URL}&sslmode=require"
-                return f"{self.DATABASE_URL}?sslmode=require"
+            if url.startswith("postgres") and "sslmode=" not in url:
+                if "?" in url:
+                    return f"{url}&sslmode=require"
+                return f"{url}?sslmode=require"
                 
-            return self.DATABASE_URL
+            return url
         
         # Fallbacks for dev/test
-        if not self.DATABASE_URL:
+        if not url:
             if self.ENVIRONMENT == Environment.TEST:
                 return "sqlite:///./test.db"
             return "sqlite:///./demo.db"
             
-        return self.DATABASE_URL
+        return url
 
 
 settings = Settings()
