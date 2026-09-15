@@ -5,4 +5,4 @@ echo "Running database migrations..."
 alembic upgrade head
 
 echo "Starting MarkMint FastAPI server in production mode..."
-exec uvicorn backend.main:app --host 0.0.0.0 --port ${PORT:-8000} --workers 4 --proxy-headers
+exec uvicorn backend.main:app --host 0.0.0.0 --port ${PORT:-8000} --proxy-headers
