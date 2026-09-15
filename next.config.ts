@@ -37,8 +37,6 @@ const nextConfig: NextConfig = {
   },
 
   devIndicators: {
-    appIsrStatus: false,
-    buildActivity: false,
   },
 };
 

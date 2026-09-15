@@ -16,9 +16,6 @@ export default function Home() {
       try {
         setRecentStudy(JSON.parse(stored));
       } catch (e) {}
-    } else {
-      // Set a default for demonstration purposes
-      setRecentStudy({ course: "18CSC301J (Operating Systems)", type: "CT2 Forecast" });
     }
   }, []);
 
@@ -83,29 +80,31 @@ export default function Home() {
         </section>
 
         {/* --- CONTINUE STUDYING --- */}
-        <section className="w-full max-w-xl mt-4">
-          <h2 className="text-xs font-semibold tracking-wider text-muted-foreground mb-4">Continue Studying</h2>
-          
-          <Link href="/mintai" className="group block bg-card border border-border hover:border-accent/40 rounded-xl p-5 transition-all duration-150 hover:-translate-y-[2px]">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center text-accent">
-                  <Clock className="w-5 h-5" />
+        {recentStudy && (
+          <section className="w-full max-w-xl mt-4">
+            <h2 className="text-xs font-semibold tracking-wider text-muted-foreground mb-4">Continue Studying</h2>
+            
+            <Link href="/mintai" className="group block bg-card border border-border hover:border-accent/40 rounded-xl p-5 transition-all duration-150 hover:-translate-y-[2px]">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center text-accent">
+                    <Clock className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-foreground text-sm group-hover:text-accent transition-colors">
+                      {recentStudy.course}
+                    </h4>
+                    <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-2">
+                      <BookOpen className="w-3 h-3" />
+                      {recentStudy.type} &bull; Last opened today
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h4 className="font-semibold text-foreground text-sm group-hover:text-accent transition-colors">
-                    {recentStudy?.course || "18CSC301J (Operating Systems)"}
-                  </h4>
-                  <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-2">
-                    <BookOpen className="w-3 h-3" />
-                    {recentStudy?.type || "CT2 Forecast"} &bull; Last opened today
-                  </p>
-                </div>
+                <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors" />
               </div>
-              <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors" />
-            </div>
-          </Link>
-        </section>
+            </Link>
+          </section>
+        )}
 
       </main>
 

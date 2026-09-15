@@ -1,4 +1,6 @@
-"use client";
+import re
+
+code = """\"use client\";
 
 import { useState, useEffect } from "react";
 import { Navbar } from "@/components/layout/navbar";
@@ -234,3 +236,7 @@ export default function StudyIntelligencePage() {
     </div>
   );
 }
+"""
+
+with open("src/app/study-plan/page.tsx", "w", encoding="utf-8") as f:
+    f.write(code)

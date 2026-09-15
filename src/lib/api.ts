@@ -10,8 +10,21 @@ async function fetchAPI(path: string, options?: RequestInit) {
   return res.json();
 }
 
+// Real Backend Endpoints
+export async function getCourses() {
+  return fetchAPI("/courses/");
+}
+
 export async function getCourse(id: string | number) {
   return fetchAPI(`/courses/${id}`);
+}
+
+export async function getPredictions(subject: string) {
+  return fetchAPI(`/predictions/${subject}`);
+}
+
+export async function getExamPredictions(id: string | number) {
+  return fetchAPI(`/predictions/${id}`);
 }
 
 export async function getExamQuestions(
@@ -22,28 +35,24 @@ export async function getExamQuestions(
   return fetchAPI(`/exams/${id}/questions?page=${page}&size=${size}`);
 }
 
-export async function getExamDNA(id: string | number) {
-  return fetchAPI(`/exams/${id}/dna`);
+export async function getExamDNA(course_id: string | number) {
+  return fetchAPI(`/analysis/dna?course_id=${course_id}`);
 }
 
-export async function getExamPredictions(id: string | number) {
-  return fetchAPI(`/exams/${id}/predictions`);
+export async function getStudyPlan(subject: string) {
+  return fetchAPI(`/study/${subject}`);
 }
 
-// Mocks for Dashboard and Course pages
-export async function getDashboardStats() { return null; }
-export async function getTopicFrequencies() { return []; }
-export async function getMarksDistribution(courseId?: string) { return []; }
-export async function getUnitDistribution() { return []; }
-export async function getQuestionTypes() { return []; }
+export async function getPractice(subject: string) {
+  return fetchAPI(`/practice/${subject}`);
+}
 
-export async function getTopicFrequency(courseId: string) { return []; }
-export async function getCourseInfo(courseId: string) { return getCourse(courseId); }
-export async function getQuestions(params: { courseId: string }) { return { items: [], total: 0 }; }
-
-export async function getHeatmapData(courseId: string) { return []; }
-export async function getHistoricalTrends(courseId: string) { return []; }
-export async function getMarksPattern(courseId: string) { return []; }
-export async function getUnitWeights(courseId: string) { return []; }
-export async function getConfidenceGroups(courseId: string) { return []; }
-export async function getStudyPlan() { return { totalDays: 0, totalHours: 0, days: [], recommendations: [] }; }
+// Global dashboard stats (if backend provides a summary, else we'll fetch courses and use that)
+export async function getDashboardStats() {
+  try {
+    return await fetchAPI("/stats/");
+  } catch (e) {
+    // Fallback if no global stats endpoint exists
+    return null;
+  }
+}

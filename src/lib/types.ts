@@ -149,3 +149,35 @@ export type FilterState = {
 
 export type HeatmapData = HeatmapCell;
 export type TrendData = HistoricalTrend;
+
+export interface BackendCourse {
+  course_id: string;
+  course_code: string;
+  course_name: string;
+}
+
+export interface BackendPrediction {
+  rank: number;
+  name: string;
+  score: number;
+  confidence: number;
+  category: string;
+  historyCount: number;
+  lastSeen: string;
+  evidence_details: string;
+}
+
+export interface PredictionResponse {
+  subject: string;
+  target_year: string;
+  predictions: BackendPrediction[];
+  evidence: any;
+  data_quality: string;
+}
+
+export interface ExamDNAAnalysis {
+  course_id: string;
+  analysis_summary: string;
+  topic_distribution: any;
+  recurring_families: any[];
+}

@@ -25,6 +25,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { EasterEggManager } from "@/components/ambient/EasterEggManager";
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_BASE_URL || "https://markmint.com"),
   title: "MarkMint | Predict exams & track GPA for SRMIST",
   description: "MintAi predicts your CT, FT, and End Sem question papers. Calculate your GPA instantly for 40+ engineering branches.",
   openGraph: {

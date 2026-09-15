@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
@@ -112,13 +112,13 @@ export function CommandPalette() {
                           router.push(cmd.href);
                           setOpen(false);
                         }}
-                        className={lex items-center gap-3 px-4 py-3 mx-2 rounded-lg cursor-pointer transition-colors \}
+                        className={`flex items-center gap-3 px-4 py-3 mx-2 rounded-lg cursor-pointer transition-colors ${active ? 'bg-accent/10 text-accent' : 'text-muted-foreground hover:bg-muted/50'}`}
                       >
-                        <Icon className={\w-4 h-4 \\} />
-                        <span className={\	ext-sm font-medium \\}>
+                        <Icon className="w-4 h-4" />
+                        <span className="text-sm font-medium">
                           {cmd.title}
                         </span>
-                        <span className={\ml-auto text-xs \\}>
+                        <span className="ml-auto text-xs">
                           {cmd.category}
                         </span>
                       </div>
