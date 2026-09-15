@@ -44,13 +44,35 @@ const shouldUseMocks = () => process.env.NEXT_PUBLIC_USE_MOCKS === "true";
 
 
 async function fetchAPI(path: string, options?: RequestInit) {
-  const res = await fetch(`${API_BASE}${path}`, options);
-  if (!res.ok) {
-    const err = new Error(`${res.status} ${res.statusText}`);
-    (err as any).status = res.status;
+  if (shouldUseMocks()) {
+    return handleMock(path);
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}${path}`, options);
+    if (!res.ok) {
+      const err = new Error(`${res.status} ${res.statusText}`);
+      (err as any).status = res.status;
+      throw err;
+    }
+    return res.json();
+  } catch (err: any) {
+    if (process.env.NODE_ENV === "development") {
+      console.warn(`[API Fallback] Fetch failed for ${path}, returning mock data.`);
+      return handleMock(path);
+    }
     throw err;
   }
-  return res.json();
+}
+
+function handleMock(path: string) {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      if (path.includes("/courses/")) resolve(MOCK_COURSES);
+      else if (path.includes("/study/plan/")) resolve(MOCK_STUDY_PLAN);
+      else resolve({ empty: true });
+    }, 800);
+  });
 }
 
 // Real Backend Endpoints
@@ -95,30 +117,50 @@ export async function getStudyResources(course_name: string, topic_name: string)
 }
 
 export async function uploadStudyNotes(formData: FormData) {
-  if (shouldUseMocks() || process.env.NODE_ENV === "development") {
+  if (shouldUseMocks()) {
     return new Promise(resolve => setTimeout(() => {
       resolve({ status: "success", document_id: "mock_doc_123", mapped_topics: ["Process Scheduling Algorithms"] });
     }, 1500));
   }
-  const res = await fetch(`${API_BASE}/study/uploads`, {
-    method: "POST",
-    body: formData,
-  });
-  if (!res.ok) {
-    throw new Error(`Upload failed: ${res.status}`);
+
+  try {
+    const res = await fetch(`${API_BASE}/study/uploads`, {
+      method: "POST",
+      body: formData,
+    });
+    if (!res.ok) {
+      throw new Error(`Upload failed: ${res.status}`);
+    }
+    return res.json();
+  } catch (err) {
+    if (process.env.NODE_ENV === "development") {
+      console.warn("[API Fallback] Upload failed, returning mock data.");
+      return new Promise(resolve => setTimeout(() => {
+        resolve({ status: "success", document_id: "mock_doc_123", mapped_topics: ["Process Scheduling Algorithms"] });
+      }, 1500));
+    }
+    throw err;
   }
-  return res.json();
 }
 
 export async function updateStudyProgress(course_id: string, data: any) {
-  if (shouldUseMocks() || process.env.NODE_ENV === "development") {
+  if (shouldUseMocks()) {
     return new Promise(resolve => setTimeout(() => resolve({ status: "success" }), 300));
   }
-  return fetchAPI(`/study/progress/${course_id}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
-  });
+  try {
+    const res = await fetchAPI(`/study/progress/${course_id}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    return res;
+  } catch (err) {
+    if (process.env.NODE_ENV === "development") {
+      console.warn("[API Fallback] Progress update failed, returning mock data.");
+      return new Promise(resolve => setTimeout(() => resolve({ status: "success" }), 300));
+    }
+    throw err;
+  }
 }
 
 export async function getPractice(subject: string) {
