@@ -1,5 +1,5 @@
 import enum
-from sqlalchemy import Column, Integer, String, Float, ForeignKey, Table, Text, Boolean, Enum as SQLEnum
+from sqlalchemy import Column, Integer, String, Float, ForeignKey, Table, Text, Boolean, Enum as SQLEnum, DateTime, JSON
 from sqlalchemy.orm import relationship
 
 from backend.core.database import Base
@@ -61,6 +61,9 @@ class Document(Base):
     title = Column(String, nullable=True)
     semester = Column(String, nullable=True)
     subject = Column(String, nullable=True)
+    owner_id = Column(String, nullable=True, index=True)
+    processing_status = Column(String, nullable=True)
+    uploaded_at = Column(DateTime, nullable=True)
     
     # Classification
     resource_type = Column(String, nullable=True)
@@ -121,7 +124,7 @@ class StudyEvidence(Base):
     __tablename__ = "study_evidences"
     id = Column(Integer, primary_key=True, index=True)
     document_id = Column(Integer, ForeignKey("documents.id"), nullable=False, index=True)
-    concept_id = Column(Integer, ForeignKey("concepts.id"), nullable=False, index=True)
+    concept_id = Column(Integer, ForeignKey("concepts.id"), nullable=True, index=True)
     
     knowledge_type = Column(String, nullable=False) # 'definition', 'formula', 'algorithm', 'context'
     content = Column(Text, nullable=False)
@@ -191,6 +194,7 @@ class Exam(Base):
     document_id = Column(Integer, ForeignKey("documents.id", ondelete="CASCADE"), unique=True, nullable=True, index=True)
     year = Column(Integer, nullable=True) # Nullable to support exams missing year metadata
     term = Column(String, nullable=True)
+    assessment_type = Column(String, nullable=True)
 
     course = relationship("Course", back_populates="exams")
     document = relationship("Document", back_populates="exams")
@@ -211,10 +215,29 @@ class Section(Base):
 class QuestionFamily(Base):
     __tablename__ = "question_families"
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, nullable=False)
-    repetition_type = Column(String, nullable=False)
+    canonical_name = Column(String, nullable=False)
+    description = Column(Text, nullable=True)
+    subject = Column(String, nullable=False, index=True)
+    first_seen_year = Column(Integer, nullable=True)
+    latest_seen_year = Column(Integer, nullable=True)
+    repetition_type = Column(String, nullable=True)
 
     questions = relationship("Question", back_populates="family")
+    memberships = relationship("QuestionFamilyMembership", back_populates="family")
+
+
+class QuestionFamilyMembership(Base):
+    __tablename__ = "question_family_memberships"
+    id = Column(Integer, primary_key=True, index=True)
+    question_id = Column(Integer, ForeignKey("questions.id"), nullable=False, index=True)
+    family_id = Column(Integer, ForeignKey("question_families.id"), nullable=False, index=True)
+    match_type = Column(String, nullable=False)
+    similarity_score = Column(Float, nullable=True)
+    decision_method = Column(String, nullable=False)
+    algorithm_version = Column(String, nullable=False)
+
+    question = relationship("Question", back_populates="memberships")
+    family = relationship("QuestionFamily", back_populates="memberships")
 
 
 class Question(Base):
@@ -228,16 +251,23 @@ class Question(Base):
     normalized_text = Column(Text, nullable=True)
     marks = Column(Float, nullable=True)
     is_alternative = Column(Boolean, default=False, nullable=False)
+    structured_content = Column(JSON, nullable=True)
+    needs_review = Column(Boolean, default=False, nullable=False)
+    extraction_method = Column(String, nullable=True)
+    extraction_confidence = Column(Float, nullable=True)
 
     question_type = Column(String, nullable=True)
     cognitive_level = Column(String, nullable=True)
     difficulty = Column(Float, nullable=True)
     classification_confidence = Column(Float, nullable=True)
+    classification_input = Column(Text, nullable=True)
+    classification_metadata = Column(JSON, nullable=True)
 
     section = relationship("Section", back_populates="questions")
     topics = relationship("Topic", secondary=question_topic, back_populates="questions")
     concept_associations = relationship("QuestionConcept", back_populates="question")
     family = relationship("QuestionFamily", back_populates="questions")
+    memberships = relationship("QuestionFamilyMembership", back_populates="question")
     evidences = relationship("Evidence", back_populates="question")
 
 
@@ -249,3 +279,27 @@ class Evidence(Base):
     confidence = Column(Float, nullable=False)
 
     question = relationship("Question", back_populates="evidences")
+
+class StudentTopicProgress(Base):
+    __tablename__ = 'student_topic_progress'
+    id = Column(Integer, primary_key=True, index=True)
+    student_id = Column(String, nullable=False, index=True)
+    topic_id = Column(Integer, ForeignKey('topics.id'), nullable=False, index=True)
+    
+    status = Column(String, nullable=False, default='NOT_STARTED')
+    practice_attempted = Column(Integer, default=0)
+    practice_correct = Column(Integer, default=0)
+    last_studied_at = Column(DateTime, nullable=True)
+    
+    topic = relationship('Topic')
+
+class StudentResourceProgress(Base):
+    __tablename__ = 'student_resource_progress'
+    id = Column(Integer, primary_key=True, index=True)
+    student_id = Column(String, nullable=False, index=True)
+    document_id = Column(Integer, ForeignKey('documents.id'), nullable=False, index=True)
+    
+    viewed = Column(Boolean, default=False)
+    last_viewed_at = Column(DateTime, nullable=True)
+    
+    document = relationship('Document')

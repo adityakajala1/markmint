@@ -40,38 +40,25 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# Python / Data
+# Python generated files
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
-.Python
-env/
-venv/
-.venv/
-env.bak/
-venv.bak/
+*.py[cod]
 
-# Scraped Data & Databases
+
+# Data
 data/
-datasets/
-scraped/
-raw/
-processed/
-embeddings/
-cache/
-.download_cache/
 *.db
-*.sqlite
-*.sqlite3
-
-# Scratch / Temporary
-scratch/
-test_*.py
-run_*.py
-inspect_*.py
-audit_*.py
-fix_imports.py
-*.html
-*.png
+*.json
 *.txt
+scratch/
+
+# Environments
+.venv/
+
+
+# Root scratch scripts
+check.py
+classify_script.py
+taxonomy_expand.py
+taxonomy_insert.py
+

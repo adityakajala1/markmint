@@ -9,7 +9,7 @@ from backend.schemas import ExamDNA
 from backend.schemas import EvolutionReport
 from backend.services.dna.analyzer import DNAAnalyzerService
 from backend.services.dna.evolution import ExamEvolutionService
-from backend.services.prediction.backtester import BacktestEngine, BacktestReport
+
 
 router = APIRouter()
 
@@ -39,7 +39,7 @@ def _get_exams_as_dicts(course_id: int, db: Session) -> list[dict]:
         ex_dict = {
             "id": ex.id,
             "year": ex.year,
-            "exam_type": ex.document.exam_type if ex.document else None,
+            "exam_type": ex.assessment_type,
             "questions": []
         }
         for sec in ex.sections:
@@ -100,21 +100,4 @@ def get_course_evolution(
     _ANALYSIS_CACHE[cache_key] = (time.time(), evolution_report)
     return evolution_report
 
-@router.get("/backtest", response_model=BacktestReport)
-def get_course_backtest(
-    course_id: int = Query(..., description="The ID of the course to backtest predictions"),
-    db: Session = Depends(get_db)
-):
-    cache_key = (course_id, "backtest")
-    if cache_key in _ANALYSIS_CACHE:
-        ts, data = _ANALYSIS_CACHE[cache_key]
-        if time.time() - ts < CACHE_TTL:
-            return data
 
-    engine = BacktestEngine(db)
-    report = engine.run_backtest(course_id)
-    if not report:
-        raise HTTPException(status_code=422, detail="Insufficient chronological data for sliding-window backtest.")
-        
-    _ANALYSIS_CACHE[cache_key] = (time.time(), report)
-    return report

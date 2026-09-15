@@ -1,156 +1,205 @@
 import json
-from typing import Any, Optional
-from sqlalchemy.orm import Session
-from pydantic import BaseModel
-from collections import defaultdict
+import os
+from typing import List, Dict, Any
+import sys
 
-from backend.models.core import Exam, Course
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
+from backend.core.database import SessionLocal
+from backend.models.core import Course
+from backend.services.prediction.context import HistoricalContext, PredictionTarget
+from backend.services.prediction.repository import HistoricalRepository
 from backend.services.dna.analyzer import DNAAnalyzerService
+from backend.services.prediction.engine import (
+    AllTimeFrequencyBaseline,
+    RecentFrequencyBaseline,
+    RecencyWeightedBaseline,
+    MarksWeightedBaseline,
+    FamilyRecurrenceBaseline,
+    ExamScopeCombinedModel
+)
 
-class BaselineMetrics(BaseModel):
-    precision_at_5: float
-    recall_marks_at_5: float
-
-class BacktestMetrics(BaseModel):
-    engine_precision_at_5: float
-    engine_recall_marks_at_5: float
-    baseline_historical_precision_at_5: float
-    baseline_recent_precision_at_5: float
-
-class IterationResult(BaseModel):
-    target_year: int
-    historical_years_available: int
-    predicted_top_topics: list[str]
-    actual_top_topics: list[str]
-    metrics: BacktestMetrics
-    failures: list[dict[str, str]]
-
-class BacktestReport(BaseModel):
-    course_name: str
-    iterations: list[IterationResult]
-    summary_metrics: dict[str, float]
-
-class BacktestEngine:
-    def __init__(self, db: Session):
-        self.db = db
-
-    def _get_historical_exams(self, course_id: int, up_to_year: int) -> list[dict[str, Any]]:
-        # To strictly prevent leakage, we query ONLY exams < up_to_year
-        exams = (
-            self.db.query(Exam)
-            .filter(Exam.course_id == course_id, Exam.year < up_to_year)
-            .all()
-        )
+class BacktestEvaluator:
+    @staticmethod
+    def evaluate(predictions: list, target_items: list, k_values: list = [5, 10, 20]) -> dict:
+        """
+        predictions: list of PredictionResult
+        target_items: list of dicts with 'name', 'marks', 'count' for the target exam
+        """
+        results = {}
+        target_names = {t['name'] for t in target_items}
+        total_target_unique = len(target_names)
+        total_target_questions = sum(t['count'] for t in target_items)
+        total_target_marks = sum(t['marks'] for t in target_items)
         
-        out = []
-        # First pass: find the earliest question for each family in this historical window
-        # so we don't leak terminology from future questions that happen to share the same global family.
-        historical_family_names = {}
-        for ex in sorted(exams, key=lambda x: x.year or 0):
-            for sec in ex.sections:
-                for q in sec.questions:
-                    if q.family_id and q.family_id not in historical_family_names:
-                        historical_family_names[q.family_id] = q.original_text[:50] + "..."
-                        
-        for ex in exams:
-            ex_dict = {
-                "id": ex.id,
-                "year": ex.year,
-                "exam_type": ex.term, # term serves as exam_type in new schema
-                "questions": []
-            }
-            for sec in ex.sections:
-                for q in sec.questions:
-                    # Topics are now mapped via QuestionConcept but we stub it for backtest backward-compatibility
-                    topic = None
-                    if q.concept_associations:
-                        topic = q.concept_associations[0].concept.name
+        for k in k_values:
+            top_k = predictions[:k]
+            top_k_names = {p.name for p in top_k}
+            
+            # Intersection (True Positives)
+            hits = top_k_names.intersection(target_names)
+            
+            # Metrics
+            precision = len(hits) / k if k > 0 else 0
+            recall = len(hits) / total_target_unique if total_target_unique > 0 else 0
+            
+            # Coverage
+            covered_questions = sum(t['count'] for t in target_items if t['name'] in top_k_names)
+            covered_marks = sum(t['marks'] for t in target_items if t['name'] in top_k_names)
+            
+            q_coverage = covered_questions / total_target_questions if total_target_questions > 0 else 0
+            m_coverage = covered_marks / total_target_marks if total_target_marks > 0 else 0
+            
+            results[f"P@{k}"] = precision
+            results[f"R@{k}"] = recall
+            results[f"Q_Cov@{k}"] = q_coverage
+            results[f"M_Cov@{k}"] = m_coverage
+            
+        return results
+
+class BacktestHarness:
+    def __init__(self):
+        self.db = SessionLocal()
+        
+    def get_usable_years(self, course_id: int) -> List[int]:
+        from backend.models.core import Exam
+        # Get all distinct years for the course that are anchored (not null)
+        years = self.db.query(Exam.year).filter(
+            Exam.course_id == course_id,
+            Exam.year != None
+        ).distinct().order_by(Exam.year.asc()).all()
+        years = [y[0] for y in years]
+        
+        # We need at least 1 year of history to predict the next year
+        if len(years) < 2:
+            return []
+        return years[1:] # Skip the very first year since it has no history
+
+    def extract_target_data(self, target_exams: list) -> dict:
+        topics = {}
+        units = {}
+        families = {}
+        
+        for exam in target_exams:
+            for section in exam.sections:
+                for q in section.questions:
+                    m = q.marks or 0.0
                     
-                    ex_dict["questions"].append({
-                        "id": q.id,
-                        "marks": q.marks,
-                        "is_alternative": q.is_alternative,
-                        "topic": topic,
-                        "unit": None,
-                        "question_type": q.question_type,
-                        "repetition_type": q.family.repetition_type if q.family else None,
-                        # Prevent global terminology leakage by using the first historical occurrence as the name
-                        "family_name": historical_family_names.get(q.family_id) if q.family_id else None,
-                        "difficulty": q.difficulty
-                    })
-            out.append(ex_dict)
-        return out
+                    if q.topic:
+                        t = topics.setdefault(q.topic.name, {'name': q.topic.name, 'count': 0, 'marks': 0.0})
+                        t['count'] += 1
+                        if not q.is_alternative: t['marks'] += m
+                        
+                    if q.unit:
+                        u = units.setdefault(q.unit.name, {'name': q.unit.name, 'count': 0, 'marks': 0.0})
+                        u['count'] += 1
+                        if not q.is_alternative: u['marks'] += m
+                        
+                    if q.family_id:
+                        fam_name = q.family.canonical_name if q.family else str(q.family_id)
+                        f = families.setdefault(fam_name, {'name': fam_name, 'count': 0, 'marks': 0.0})
+                        f['count'] += 1
+                        if not q.is_alternative: f['marks'] += m
+                        
+        return {
+            PredictionTarget.TOPIC: list(topics.values()),
+            PredictionTarget.UNIT: list(units.values()),
+            PredictionTarget.FAMILY: list(families.values())
+        }
 
-    def run_backtest(self, course_id: int) -> Optional[BacktestReport]:
-        course = self.db.query(Course).filter(Course.id == course_id).first()
-        if not course:
-            return None
-
-        exams = self.db.query(Exam).filter(Exam.course_id == course_id).all()
-        years = sorted(list({e.year for e in exams if e.year}))
+    def run(self):
+        courses = self.db.query(Course).all()
+        report = []
         
-        if len(years) < 3:
-            return None # Insufficient data to slide window
+        for course in courses:
+            usable_years = self.get_usable_years(course.id)
+            if not usable_years:
+                continue
+                
+            for target_year in usable_years:
+                context = HistoricalContext(course_id=course.id, cutoff_year=target_year)
+                repo = HistoricalRepository(self.db, context)
+                
+                # 1. Freeze Historical State
+                hist_exams_orm = repo.get_historical_exams()
+                # Convert ORM to dicts for ExamDNAAnalyzer
+                hist_exams_dicts = [
+                    {
+                        "id": e.id,
+                        "year": e.year,
+                        "exam_type": e.exam_type,
+                        "questions": [
+                            {
+                                "id": q.id,
+                                "marks": q.marks,
+                                "is_alternative": q.is_alternative,
+                                "topic": q.topic.name if q.topic else None,
+                                "unit": q.unit.name if q.unit else None,
+                                "question_type": q.question_type,
+                                "repetition_type": q.memberships[0].match_type if q.memberships else "singleton",
+                                "family_name": q.family.canonical_name if q.family else None,
+                                "difficulty": q.difficulty
+                            }
+                            for sec in e.sections for q in sec.questions
+                        ]
+                    }
+                    for e in hist_exams_orm
+                ]
+                
+                analyzer = DNAAnalyzerService()
+                dna = analyzer.analyze(hist_exams_dicts, course.name)
+                
+                # 2. Generate Predictions (Models A-F)
+                models = {
+                    "A_AllTimeFreq": AllTimeFrequencyBaseline(dna),
+                    "B_RecentFreq": RecentFrequencyBaseline(dna),
+                    "C_RecencyWeighted": RecencyWeightedBaseline(dna),
+                    "E_MarksWeighted": MarksWeightedBaseline(dna),
+                    "F_ExamScopeCombined": ExamScopeCombinedModel(dna)
+                }
+                
+                fam_models = {
+                    "D_FamilyRecurrence": FamilyRecurrenceBaseline(dna),
+                    "F_ExamScopeCombined": ExamScopeCombinedModel(dna)
+                }
+                
+                # 3. Reveal Target Exam
+                targ_exams_orm = repo.get_target_exams()
+                target_data = self.extract_target_data(targ_exams_orm)
+                
+                # 4. Evaluate
+                for m_name, model in models.items():
+                    for target_type in [PredictionTarget.TOPIC, PredictionTarget.UNIT]:
+                        preds = model.predict(target_type)
+                        targ_items = target_data[target_type]
+                        if targ_items:
+                            evals = BacktestEvaluator.evaluate(preds, targ_items)
+                            report.append({
+                                "course": course.name,
+                                "target_year": target_year,
+                                "model": m_name,
+                                "target_type": target_type,
+                                "eval": evals
+                            })
+                            
+                for m_name, model in fam_models.items():
+                    preds = model.predict(PredictionTarget.FAMILY)
+                    targ_items = target_data[PredictionTarget.FAMILY]
+                    if targ_items:
+                        evals = BacktestEvaluator.evaluate(preds, targ_items)
+                        report.append({
+                            "course": course.name,
+                            "target_year": target_year,
+                            "model": m_name,
+                            "target_type": PredictionTarget.FAMILY,
+                            "eval": evals
+                        })
 
-        iterations = []
-        
-        # We need at least 2 years of history to predict the 3rd
-        for i in range(2, len(years)):
-            target_year = years[i]
-            hist_years = years[:i]
+        os.makedirs('data/reports', exist_ok=True)
+        with open('data/reports/backtest_results.json', 'w') as f:
+            json.dump(report, f, indent=2)
             
-            # To strictly prevent leakage, we query ONLY exams < target_year
-            historical_exams_orm = (
-                self.db.query(Exam)
-                .filter(Exam.course_id == course_id, Exam.year < target_year)
-                .all()
-            )
-            
-            target_exams_orm = (
-                self.db.query(Exam)
-                .filter(Exam.course_id == course_id, Exam.year == target_year)
-                .all()
-            )
-            
-            # Convert to dicts for DNA Analyzer...
-            # (In reality, we serialize ORM to dict here. We'll stub the core evaluation for now)
-            
-            # Mocking the IterationResult for architectural completeness
-            res = IterationResult(
-                target_year=target_year,
-                historical_years_available=len(hist_years),
-                predicted_top_topics=["Graphs", "Trees"],
-                actual_top_topics=["Graphs", "Hashing"],
-                metrics=BacktestMetrics(
-                    engine_precision_at_5=0.8,
-                    engine_recall_marks_at_5=0.6,
-                    baseline_historical_precision_at_5=0.6,
-                    baseline_recent_precision_at_5=0.4
-                ),
-                failures=[{
-                    "topic": "Hashing",
-                    "reason": "Sudden exam change (never appeared in previous 2 years)"
-                }]
-            )
-            iterations.append(res)
-            
-        return BacktestReport(
-            course_name=course.name,
-            iterations=iterations,
-            summary_metrics={"avg_precision": 0.8}
-        )
+        print("Backtest complete. Results written to data/reports/backtest_results.json")
 
-    def write_report(self, report: BacktestReport, json_path: str, md_path: str):
-        with open(json_path, 'w') as f:
-            f.write(report.model_dump_json(indent=2))
-            
-        with open(md_path, 'w') as f:
-            f.write(f"# Backtest Report: {report.course_name}\n\n")
-            f.write(f"**Average Precision**: {report.summary_metrics['avg_precision']}\n\n")
-            for iter_res in report.iterations:
-                f.write(f"## Target Year {iter_res.target_year}\n")
-                f.write(f"- Historical window: {iter_res.historical_years_available} years\n")
-                f.write(f"- Engine Precision@5: {iter_res.metrics.engine_precision_at_5}\n")
-                f.write("### Failures\n")
-                for fail in iter_res.failures:
-                    f.write(f"- **{fail['topic']}**: {fail['reason']}\n")
+if __name__ == '__main__':
+    harness = BacktestHarness()
+    harness.run()

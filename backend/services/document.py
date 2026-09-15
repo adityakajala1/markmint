@@ -1,6 +1,18 @@
-from typing import Any
+from typing import Any, Optional
 from sqlalchemy.orm import Session
-from backend.models.core import Document, Exam, Section, Question, Concept, StudyEvidence
+from backend.models.core import (
+    Course,
+    Document,
+    Exam,
+    MappingConfidence,
+    Section,
+    Question,
+    Concept,
+    StudyEvidence,
+    Syllabus,
+    Topic,
+    Unit,
+)
 
 class DocumentService:
     def __init__(self, db: Session):
@@ -32,7 +44,7 @@ class DocumentService:
             self.db.flush()
         return concept
 
-    def import_exam_extraction(self, document_id: int, course_id: int, year: int, term: str, extraction_data: dict) -> Exam:
+    def import_exam_extraction(self, document_id: int, course_id: int, year: Optional[int], term: str, extraction_data: dict) -> Exam:
         # Idempotency check: if Exam exists for this document, delete its children and it to prepare for fresh insert
         existing_exam = self.db.query(Exam).filter(Exam.document_id == document_id).first()
         if existing_exam:
@@ -42,7 +54,18 @@ class DocumentService:
             self.db.delete(existing_exam)
             self.db.flush()
 
-        new_exam = Exam(course_id=course_id, document_id=document_id, year=year, term=term)
+        # Prioritize LLM-extracted metadata
+        extracted_year = extraction_data.get('year')
+        final_year = extracted_year if extracted_year is not None else year
+        assessment_type = extraction_data.get('assessment_type')
+
+        new_exam = Exam(
+            course_id=course_id, 
+            document_id=document_id, 
+            year=final_year, 
+            term=term,
+            assessment_type=assessment_type
+        )
         self.db.add(new_exam)
         self.db.flush()
         
@@ -60,6 +83,10 @@ class DocumentService:
                     section_id=new_section.id,
                     question_number=q_data.get('question_number', '?'),
                     original_text=q_data.get('original_text', ''),
+                    structured_content=q_data.get('structured_content'),
+                    needs_review=q_data.get('needs_review', False),
+                    extraction_method=q_data.get('extraction_method', 'legacy_ocr'),
+                    extraction_confidence=q_data.get('confidence', 0.8),
                     marks=q_data.get('marks'),
                     is_alternative=q_data.get('is_alternative', False)
                 )
@@ -75,17 +102,47 @@ class DocumentService:
         self.db.refresh(new_exam)
         return new_exam
 
-    def import_knowledge_extraction(self, document_id: int, extraction_data: dict):
+    def import_knowledge_extraction(
+        self, document_id: int, extraction_data: dict, course_id: Optional[int] = None
+    ):
+        document = self.db.query(Document).get(document_id)
+        if course_id is None and document and document.subject:
+            course = self.db.query(Course).filter(Course.name == document.subject).first()
+            course_id = course.id if course else None
+
+        taxonomy_lookup = {}
+        if course_id is not None:
+            taxonomy_rows = (
+                self.db.query(Concept, Topic)
+                .join(Unit, Concept.unit_id == Unit.id)
+                .join(Syllabus, Unit.syllabus_id == Syllabus.id)
+                .join(Topic, Topic.unit_id == Unit.id)
+                .filter(Syllabus.course_id == course_id, Topic.name == Concept.canonical_name)
+                .all()
+            )
+            taxonomy_lookup = {
+                concept.canonical_name.casefold(): (concept, topic)
+                for concept, topic in taxonomy_rows
+            }
+
         for concept_data in extraction_data.get('concepts', []):
-            concept = self._get_or_create_concept(concept_data.get('concept_name', 'Unknown'))
+            name = concept_data.get('concept_name', 'Unknown Concept')
+            match = taxonomy_lookup.get(name.casefold()) if name != "Unknown Concept" else None
+            concept_id = match[0].id if match else None
+            confidence = (
+                MappingConfidence.HIGH
+                if match and float(concept_data.get("confidence", 0.0)) >= 0.8
+                else MappingConfidence.UNRESOLVED
+            )
             
             evidence = StudyEvidence(
                 document_id=document_id,
-                concept_id=concept.id,
+                concept_id=concept_id,
                 knowledge_type=concept_data.get('knowledge_type', 'context'),
                 content=concept_data.get('content', ''),
                 original_text=concept_data.get('original_text', ''),
-                page_number=concept_data.get('page_number')
+                page_number=concept_data.get('page_number'),
+                confidence=confidence,
             )
             self.db.add(evidence)
             

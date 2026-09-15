@@ -2,10 +2,12 @@ import os
 import sqlite3
 import json
 import sys
+import re
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-os.environ.setdefault('ENVIRONMENT', 'production')
+from dotenv import load_dotenv
+load_dotenv()
 
 from sqlalchemy.exc import OperationalError
 from backend.core.database import SessionLocal, Base, engine
@@ -13,6 +15,7 @@ from backend.models.core import Course
 from backend.services.extraction.pdf_parser import PDFParser
 from backend.services.extraction.question_extractor import QuestionExtractor
 from backend.services.extraction.knowledge_extractor import KnowledgeExtractor
+from backend.services.extraction.vision_extractor import VisionExtractor
 from backend.services.document import DocumentService
 
 
@@ -107,7 +110,13 @@ def process_downloads(max_files: int = 50):
         title = filename[:-4] if filename.endswith('.pdf') else filename
         resource_type = categorize(filename)
         
-        print(f"  [>] Type: {resource_type}")
+        # Try extracting year from title
+        year = None
+        year_match = re.search(r'(20\d{2})', title)
+        if year_match:
+            year = int(year_match.group(1))
+        
+        print(f"  [>] Type: {resource_type}, Year: {year}")
         
         # Get or Create Course
         course = db.query(Course).filter_by(name=subject_name).first()
@@ -127,28 +136,26 @@ def process_downloads(max_files: int = 50):
             resource_type=resource_type
         )
             
-        print(f"  [>] Extracting text via PDFParser...")
         try:
-            with open(local_path, "rb") as f:
-                pages_data = PDFParser.extract_text_with_pages(f)
-            
-            if not pages_data:
-                print("  [!] Document is empty or unreadable.")
-                stats["failed"] += 1
-                cursor.execute("UPDATE downloads SET processed = 2 WHERE id = ?", (row_id,))
-                conn.commit()
-                continue
-            
             # Route to correct extraction logic based on resource_type
             is_exam = resource_type in ['examination papers / PYQs', 'CT papers']
             is_syllabus = resource_type == 'syllabi'
             
             if is_exam:
-                print(f"  [>] Running Exam Question Extractor...")
-                result = QuestionExtractor.extract(pages_data)
+                # Attempt Vision Extraction first
+                print(f"  [>] Running Exam Question Extractor (Vision Mode)...")
+                result = VisionExtractor.extract_pdf(local_path)
+                
+                # Fallback to Legacy OCR if API Key missing or error
+                if not result.successful:
+                    print(f"  [!] Vision Extraction failed/skipped: {result.error_message}. Falling back to OCR...")
+                    with open(local_path, "rb") as f:
+                        pages_data = PDFParser.extract_text_with_pages(f)
+                    if pages_data:
+                        result = QuestionExtractor.extract(pages_data)
                 
                 if not result.successful:
-                    print(f"  [!] Extraction failed: {result.error_message}")
+                    print(f"  [!] Extraction failed completely: {result.error_message}")
                     stats["failed"] += 1
                     cursor.execute("UPDATE downloads SET processed = 2 WHERE id = ?", (row_id,))
                     conn.commit()
@@ -157,14 +164,24 @@ def process_downloads(max_files: int = 50):
                 doc_svc.import_exam_extraction(
                     document_id=doc.id,
                     course_id=course.id, 
-                    year=2023, 
+                    year=year,  # Passes None if unknown, preserving data integrity!
                     term="Fall", 
                     extraction_data=result.model_dump()
                 )
                 print(f"  [+] Ingested {len(result.sections)} sections as EXAM")
                 stats["processed"] += 1
             elif not is_syllabus:
-                print(f"  [>] Running Study Material Knowledge Extractor...")
+                print(f"  [>] Running Study Material Knowledge Extractor (OCR Mode)...")
+                with open(local_path, "rb") as f:
+                    pages_data = PDFParser.extract_text_with_pages(f)
+                
+                if not pages_data:
+                    print("  [!] Document is empty or unreadable.")
+                    stats["failed"] += 1
+                    cursor.execute("UPDATE downloads SET processed = 2 WHERE id = ?", (row_id,))
+                    conn.commit()
+                    continue
+
                 result = KnowledgeExtractor.extract(pages_data)
                 
                 if not result.successful:

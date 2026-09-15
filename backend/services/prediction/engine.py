@@ -1,115 +1,147 @@
-from typing import Any
-from collections import defaultdict
-import math
+from typing import List, Dict, Any, Tuple
+from backend.services.dna.analyzer import ExamDNA
+from backend.services.prediction.context import PredictionTarget
 
-from backend.schemas import Prediction, ExamPredictions
+class PredictionResult:
+    def __init__(self, target: str, name: str, rank: int, score: float, confidence: str, evidence: dict):
+        self.target = target  # 'topic', 'unit', 'family', 'concept'
+        self.name = name
+        self.rank = rank
+        self.score = score
+        self.confidence = confidence
+        self.evidence = evidence
 
-class PredictionEngineService:
-    def __init__(self, min_sample_size: int = 3, recency_weight_decay: float = 0.9):
-        """
-        min_sample_size: Minimum number of historical papers required to make High/Medium predictions.
-        recency_weight_decay: How much older papers are discounted compared to newer ones. 
-                              e.g., 0.9 means n-1 year is worth 0.9 of year n.
-        """
-        self.min_sample_size = min_sample_size
-        self.recency_weight_decay = recency_weight_decay
+class BaseModel:
+    def __init__(self, dna: ExamDNA):
+        self.dna = dna
 
-    def generate_predictions(self, exams: list[dict[str, Any]]) -> ExamPredictions:
-        total_exams = len(exams)
+    def predict_topics(self) -> List[PredictionResult]:
+        return []
         
-        if total_exams == 0:
-            return ExamPredictions(
-                predictions=[], 
-                total_papers_analyzed=0, 
-                insufficient_data=True
-            )
+    def predict_units(self) -> List[PredictionResult]:
+        return []
+        
+    def predict_families(self) -> List[PredictionResult]:
+        return []
+        
+    def predict(self, target_type: str) -> List[PredictionResult]:
+        if target_type == PredictionTarget.TOPIC:
+            return self.predict_topics()
+        elif target_type == PredictionTarget.UNIT:
+            return self.predict_units()
+        elif target_type == PredictionTarget.FAMILY:
+            return self.predict_families()
+        return []
+        
+    def _rank_and_format(self, scored_items: List[Tuple[str, float, dict]], target: str) -> List[PredictionResult]:
+        # Sort by score descending
+        scored_items.sort(key=lambda x: x[1], reverse=True)
+        results = []
+        for rank, (name, score, evidence) in enumerate(scored_items, start=1):
+            conf = "HIGH" if score > 0.7 else "MEDIUM" if score > 0.4 else "LOW"
+            if evidence.get("sample_size", 0) < 3 and target == PredictionTarget.FAMILY:
+                conf = "INSUFFICIENT"
+            
+            results.append(PredictionResult(
+                target=target,
+                name=name,
+                rank=rank,
+                score=score,
+                confidence=conf,
+                evidence=evidence
+            ))
+        return results
 
-        if total_exams < self.min_sample_size:
-            limitation = f"Only {total_exams} historical paper{'s are' if total_exams > 1 else ' is'} available, which is insufficient for reliable predictions."
-            return ExamPredictions(
-                predictions=[
-                    Prediction(
-                        characteristic="Overall",
-                        predicted_insight="Cannot generate reliable predictions.",
-                        confidence="Insufficient Evidence",
-                        supporting_evidence="Dataset size falls below the minimum threshold.",
-                        sample_size=total_exams,
-                        limitations=limitation
-                    )
-                ],
-                total_papers_analyzed=total_exams,
-                insufficient_data=True
-            )
-            
-        # We have enough data.
-        predictions = []
-        predictions.extend(self._predict_high_weight_topics(exams))
+class AllTimeFrequencyBaseline(BaseModel):
+    def predict_topics(self):
+        scores = [(t.topic, t.historical_frequency, {"freq": t.historical_frequency}) for t in self.dna.topics]
+        return self._rank_and_format(scores, PredictionTarget.TOPIC)
         
-        return ExamPredictions(
-            predictions=predictions,
-            total_papers_analyzed=total_exams,
-            insufficient_data=False
-        )
+    def predict_units(self):
+        # We use question count percentage for unit frequency if we want count frequency
+        # But we only have historical_weighting which is marks. 
+        # Wait, the unit DNA has question_count. We can divide by dna.sample_size.questions.
+        total_q = self.dna.sample_size.questions
+        scores = []
+        for u in self.dna.units:
+            freq = (u.question_count / total_q) if total_q else 0
+            scores.append((u.unit, freq, {"freq": freq}))
+        return self._rank_and_format(scores, PredictionTarget.UNIT)
+
+class RecentFrequencyBaseline(BaseModel):
+    def predict_topics(self):
+        scores = [(t.topic, t.recent_frequency, {"recent_freq": t.recent_frequency}) for t in self.dna.topics]
+        return self._rank_and_format(scores, PredictionTarget.TOPIC)
         
-    def _predict_high_weight_topics(self, exams: list[dict[str, Any]]) -> list[Prediction]:
-        """
-        Analyzes topics based on recency-weighted appearance and marks.
-        """
-        total_exams = len(exams)
-        sorted_exams = sorted(exams, key=lambda x: x.get("year", 0), reverse=True)
+    def predict_units(self):
+        scores = [(u.unit, u.recent_weighting, {"recent_weight": u.recent_weighting}) for u in self.dna.units]
+        return self._rank_and_format(scores, PredictionTarget.UNIT)
+
+class RecencyWeightedBaseline(BaseModel):
+    def predict_topics(self):
+        scores = []
+        for t in self.dna.topics:
+            score = (0.7 * t.recent_frequency) + (0.3 * t.historical_frequency)
+            scores.append((t.topic, score, {"recent_freq": t.recent_frequency, "hist_freq": t.historical_frequency}))
+        return self._rank_and_format(scores, PredictionTarget.TOPIC)
+
+class MarksWeightedBaseline(BaseModel):
+    def predict_topics(self):
+        total_marks = sum(t.total_marks for t in self.dna.topics)
+        scores = []
+        for t in self.dna.topics:
+            weight = (t.total_marks / total_marks) if total_marks else 0
+            scores.append((t.topic, weight, {"marks_weight": weight}))
+        return self._rank_and_format(scores, PredictionTarget.TOPIC)
         
-        topic_paper_appearances: dict[str, int] = defaultdict(int)
-        topic_total_marks: dict[str, float] = defaultdict(float)
-        topic_weighted_marks: dict[str, float] = defaultdict(float)
+    def predict_units(self):
+        scores = [(u.unit, u.historical_weighting, {"marks_weight": u.historical_weighting}) for u in self.dna.units]
+        return self._rank_and_format(scores, PredictionTarget.UNIT)
+
+class FamilyRecurrenceBaseline(BaseModel):
+    def predict_families(self):
+        scores = []
+        for f in self.dna.families:
+            # Score heavily based on recurrence interval and historical consistency
+            # For a naive baseline, we just use occurrences or recent count
+            score = f.occurrences * 0.5 + f.recent_recurrence_count * 0.5
+            scores.append((f.family_name, score, {"occurrences": f.occurrences, "sample_size": f.occurrences}))
+        return self._rank_and_format(scores, PredictionTarget.FAMILY)
+
+class ExamScopeCombinedModel(BaseModel):
+    def predict_topics(self):
+        total_marks = sum(t.total_marks for t in self.dna.topics)
+        scores = []
+        for t in self.dna.topics:
+            marks_w = (t.total_marks / total_marks) if total_marks else 0
+            score = (0.4 * t.recent_frequency) + (0.3 * marks_w) + (0.3 * t.historical_frequency)
+            scores.append((t.topic, score, {
+                "combo": True, 
+                "recent_freq": t.recent_frequency,
+                "hist_freq": t.historical_frequency,
+                "occurrences": t.question_count
+            }))
+        return self._rank_and_format(scores, PredictionTarget.TOPIC)
         
-        total_historical_marks = 0.0
+    def predict_units(self):
+        scores = []
+        for u in self.dna.units:
+            score = (0.6 * u.recent_weighting) + (0.4 * u.historical_weighting)
+            scores.append((u.unit, score, {
+                "combo": True,
+                "occurrences": u.question_count
+            }))
+        return self._rank_and_format(scores, PredictionTarget.UNIT)
         
-        # Calculate weights based on decay (0 index = newest exam = weight 1.0)
-        for i, exam in enumerate(sorted_exams):
-            weight = math.pow(self.recency_weight_decay, i)
-            
-            seen_topics_in_exam = set()
-            exam_marks = sum(q.get("marks") or 0.0 for q in exam.get("questions", []))
-            total_historical_marks += exam_marks
-            
-            for q in exam.get("questions", []):
-                topic = q.get("topic")
-                marks = q.get("marks") or 0.0
-                
-                if topic:
-                    seen_topics_in_exam.add(topic)
-                    topic_total_marks[topic] += marks
-                    topic_weighted_marks[topic] += (marks * weight)
-                    
-            for t in seen_topics_in_exam:
-                topic_paper_appearances[t] += 1
-                
-        # Generate predictions for top topics
-        predictions = []
-        
-        # Sort by recency-weighted marks
-        sorted_topics = sorted(topic_weighted_marks.items(), key=lambda x: x[1], reverse=True)
-        
-        for topic, w_marks in sorted_topics:
-            appearances = topic_paper_appearances[topic]
-            freq = appearances / total_exams
-            raw_marks_pct = (topic_total_marks[topic] / total_historical_marks) * 100 if total_historical_marks > 0 else 0
-            
-            # Avoid false precision: round to 0 decimal places
-            raw_marks_pct = round(raw_marks_pct)
-            freq_rounded = round(freq, 2)
-            
-            if appearances >= (total_exams * 0.5) and raw_marks_pct > 15:
-                predictions.append(
-                    Prediction(
-                        characteristic="High-Weight Topic",
-                        predicted_insight=f"'{topic}' has consistently high historical importance for marks.",
-                        confidence="High" if freq >= 0.8 else "Medium",
-                        supporting_evidence=f"Appeared in {appearances} of {total_exams} papers and accounted for approximately {raw_marks_pct}% of total historical marks.",
-                        sample_size=total_exams,
-                        historical_frequency=freq_rounded,
-                        limitations=f"Sample size of {total_exams} papers limits long-term certainty."
-                    )
-                )
-                
-        return predictions
+    def predict_families(self):
+        scores = []
+        for f in self.dna.families:
+            score = (f.occurrences * 0.4) + (f.recent_recurrence_count * 0.6)
+            last_seen = str(max(f.years)) if f.years else "Unknown"
+            scores.append((f.family_name, score, {
+                "occurrences": f.occurrences, 
+                "sample_size": f.occurrences, 
+                "interval": f.recurrence_interval_years,
+                "last_seen": last_seen
+            }))
+        return self._rank_and_format(scores, PredictionTarget.FAMILY)

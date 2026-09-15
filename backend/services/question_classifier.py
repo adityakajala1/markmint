@@ -1,4 +1,9 @@
 import abc
+import re
+import unicodedata
+from typing import Optional
+
+from backend.schemas import ClassificationResult
 
 class BaseClassificationProvider(abc.ABC):
     
@@ -7,7 +12,7 @@ class BaseClassificationProvider(abc.ABC):
         pass
         
     @abc.abstractmethod
-    def get_semantic_classification(self, text: str, categories: list[str]) -> tuple[str, float]:
+    def get_semantic_classification(self, text: str, categories: list[str]) -> tuple[str | None, float]:
         pass
 
 import numpy as np
@@ -26,9 +31,9 @@ class LocalTransformerProvider(BaseClassificationProvider):
             return embeddings.tolist()  # type: ignore
         return [list(map(float, e)) for e in embeddings]
 
-    def get_semantic_classification(self, text: str, categories: list[str]) -> tuple[str, float]:
+    def get_semantic_classification(self, text: str, categories: list[str]) -> tuple[str | None, float]:
         if not categories:
-            return "", 0.0
+            return None, 0.0
             
         text_emb = np.array(self.get_embeddings([text]))
         cat_embs = np.array(self.get_embeddings(categories))
@@ -42,12 +47,19 @@ class LocalTransformerProvider(BaseClassificationProvider):
         best_idx = int(np.argmax(similarities))
         best_score = float(similarities[best_idx])
         
+        # Threshold: if score is too low, it's not a confident match.
+        if best_score < 0.45:
+            return None, best_score
+
         return categories[best_idx], best_score
 
 from typing import Optional
 from backend.schemas import ClassificationResult
 
 class ClassificationService:
+    CLASSIFIER_VERSION = "course-scoped-semantic-v1"
+    SIMILARITY_THRESHOLD = 0.45
+
     def __init__(self, provider: BaseClassificationProvider):
         self.provider = provider
         
@@ -62,16 +74,175 @@ class ClassificationService:
         cog_level = self._determine_cognitive_level(question_text)
         difficulty = self._estimate_difficulty(marks, cog_level)
         
-        # Semantic mapping to syllabus topics
+        # Semantic mapping to syllabus topics. The canonical representation is
+        # supplied by the caller and is intentionally not normalized here.
         topic, conf = self.provider.get_semantic_classification(question_text, available_topics)
-        
+
+        guardrail_reason = self._domain_guardrail_reason(question_text, topic)
+        if guardrail_reason:
+            topic = None
+
         return ClassificationResult(
             question_type=q_type,
             cognitive_level=cog_level,
             difficulty=difficulty,
             topics=[topic] if topic else [],
-            confidence=conf
+            confidence=conf,
+            guardrail_reason=guardrail_reason,
         )
+
+    @classmethod
+    def _domain_guardrail_reason(
+        cls, question_text: str, candidate_topic: Optional[str]
+    ) -> Optional[str]:
+        """Reject known cross-domain collisions while preserving unresolved results."""
+        if not candidate_topic:
+            return None
+
+        question = cls._domain_text(question_text)
+        topic = cls._domain_text(candidate_topic)
+
+        if cls._topic_matches(topic, ("ionization energy", "ionisation energy")):
+            if cls._contains_any(
+                question,
+                (
+                    "polarizability",
+                    "polarising power",
+                    "polarizing power",
+                    "fajan rule",
+                    "fajan s rule",
+                    "fajans rule",
+                ),
+            ):
+                return "polarization-domain content is not ionization energy"
+            if cls._contains_any(
+                question,
+                (
+                    "photoelectron",
+                    "photo electron",
+                    "photoelectric",
+                    "photo electric",
+                    "photo emission",
+                    "photoemission",
+                    "photoelectron spectroscopy",
+                    "xps",
+                    "impinging photon",
+                ),
+            ):
+                return "photoelectron/photoelectric content is not ionization energy"
+
+        if cls._topic_matches(topic, ("photoelectron spectroscopy",)):
+            if not cls._contains_any(question, ("photoelectron", "photo electron", "xps")):
+                return "electronic/other spectroscopy content is not photoelectron spectroscopy"
+
+        if cls._topic_matches(topic, ("hydrogen atomic orbitals",)):
+            if cls._contains_any(
+                question,
+                (
+                    "molecular orbital",
+                    "lcao",
+                    "linear combination of atomic orbitals",
+                    "bond order",
+                    "bonding and antibonding",
+                    "overlap of",
+                    "overlapping of",
+                ),
+            ):
+                return "molecular-orbital content is not hydrogen atomic orbitals"
+
+        if cls._topic_matches(topic, ("molecular orbital theory",)):
+            if cls._contains_any(
+                question,
+                (
+                    "crystal field",
+                    "ligand field",
+                    "cfse",
+                    "high spin",
+                    "low spin",
+                    "d orbital splitting",
+                    "spectrochemical series",
+                    "uncertainty principle",
+                    "de broglie",
+                    "spin quantum number",
+                ),
+            ):
+                return "quantum/coordination content is not molecular orbital theory"
+
+        if cls._topic_matches(topic, ("spectroscopy fundamentals",)):
+            if cls._contains_any(
+                question,
+                (
+                    "spectrochemical series",
+                    "crystal field",
+                    "ligand field",
+                    "nmr",
+                    "nuclear magnetic resonance",
+                    "chemical shift",
+                    "spin spin",
+                    "shielding",
+                    "uv vis",
+                    "uv visible",
+                ),
+            ):
+                return "specific spectroscopy/coordination content is not spectroscopy fundamentals"
+
+        if cls._topic_matches(topic, ("crystal field theory",)):
+            if not cls._contains_any(
+                question,
+                (
+                    "crystal field",
+                    "ligand field",
+                    "cfse",
+                    "high spin",
+                    "low spin",
+                    "d orbital",
+                    "spectrochemical series",
+                ),
+            ):
+                return "non-coordination content is not crystal field theory"
+
+        if cls._topic_matches(topic, ("coordination isomerism",)):
+            if not cls._contains_any(
+                question,
+                ("coordination", "transition metal", "complex", "metal ion"),
+            ):
+                return "general organic isomerism is not coordination isomerism"
+
+        if cls._topic_matches(topic, ("organic reagents and reaction types",)):
+            if cls._contains_any(question, ("oxidation", "oxidized", "reduction", "reducing")):
+                return "redox content is not general organic reagent types"
+
+        if cls._topic_matches(topic, ("atomic radius", "atomic radii")) and cls._contains_any(
+            question,
+            (
+                "radial wave function",
+                "radial wavefunction",
+                "wave function",
+                "wavefunction",
+                "schrodinger",
+                "schrödinger",
+            ),
+        ):
+            return "quantum wavefunction content is not atomic radius"
+
+        return None
+
+    @staticmethod
+    def _domain_text(value: str) -> str:
+        ascii_value = (
+            unicodedata.normalize("NFKD", value)
+            .encode("ascii", "ignore")
+            .decode("ascii")
+        )
+        return re.sub(r"[^a-z0-9]+", " ", ascii_value.lower()).strip()
+
+    @staticmethod
+    def _contains_any(value: str, phrases: tuple[str, ...]) -> bool:
+        return any(phrase in value for phrase in phrases)
+
+    @staticmethod
+    def _topic_matches(topic: str, aliases: tuple[str, ...]) -> bool:
+        return any(alias in topic for alias in aliases)
 
     def _determine_type(self, text: str) -> str:
         text_lower = text.lower()

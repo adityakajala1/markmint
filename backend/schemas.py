@@ -12,6 +12,7 @@ class ClassificationResult(BaseModel):
     difficulty: Optional[float] = None
     topics: list[str] = []
     confidence: float
+    guardrail_reason: Optional[str] = None
 
 class ExamEvidenceStats(BaseModel):
     number_of_papers: int
@@ -309,13 +310,22 @@ class EvolutionReport(BaseModel):
     repetition_change_points: list[ChangePoint]
 
 
+class SubquestionSchema(BaseModel):
+    number: str
+    text: str
+    marks: Optional[float] = None
+    subquestions: list['SubquestionSchema'] = []
+
 class ExtractedQuestion(BaseModel):
     question_number: str
     original_text: str
+    structured_content: Optional[dict] = None
     marks: Optional[float] = None
     is_alternative: bool = False
     page_number: int
     confidence: float
+    needs_review: bool = False
+    extraction_method: str = "legacy_ocr"
 
 
 class ExtractedSection(BaseModel):
@@ -329,6 +339,8 @@ class DocumentExtractionResult(BaseModel):
     total_pages: int
     successful: bool
     error_message: Optional[str] = None
+    assessment_type: Optional[str] = None
+    year: Optional[int] = None
 
 
 class ExtractedConcept(BaseModel):

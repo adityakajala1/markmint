@@ -7,7 +7,7 @@ from backend.schemas import Page
 from backend.schemas import ExamDNA
 from backend.schemas import ExamPredictions
 from backend.services.dna.analyzer import DNAAnalyzerService
-from backend.services.prediction.engine import PredictionEngineService
+
 
 class ExamRepository(BaseRepository[Exam]):
     pass
@@ -93,32 +93,7 @@ class ExamService:
             
         return DNAAnalyzerService.analyze(exam_payloads)
 
-    def get_exam_predictions(self, exam_id: int) -> ExamPredictions:
-        engine = PredictionEngineService()
-        target_exam = self.get_exam(exam_id)
-        if not target_exam:
-            return ExamPredictions(predictions=[], total_papers_analyzed=0, insufficient_data=True)
-            
-        historical_exams = self.db.query(Exam).filter(Exam.course_id == target_exam.course_id).all()
-        
-        exam_payloads = []
-        for ex in historical_exams:
-            q_payloads = []
-            for sec in ex.sections:
-                for q in sec.questions:
-                    topic_name = q.topics[0].name if q.topics else None
-                    q_payloads.append({
-                        "id": str(q.id),
-                        "topic": topic_name,
-                        "marks": q.marks or 0.0
-                    })
-            exam_payloads.append({
-                "id": str(ex.id),
-                "year": ex.year,
-                "questions": q_payloads
-            })
-            
-        return engine.generate_predictions(exam_payloads)
+
 
     def import_extraction(self, course_id: int, year: int, term: str, extraction_data: dict) -> Exam:
         from backend.models.core import Section

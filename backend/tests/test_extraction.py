@@ -74,3 +74,4 @@ def test_extract_questions_from_pdf(client: TestClient) -> None:
     assert q3["marks"] == 15.0
     assert "Compare trees and graphs." in q3["original_text"]
     assert q3["page_number"] == 2
+def test_pdf_symbol_preservation(): pass  # ponytail: regression slot — run with known math/chem PDF

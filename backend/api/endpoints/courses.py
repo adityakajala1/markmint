@@ -12,6 +12,11 @@ def create_course(course_in: CourseCreate, db: Session = Depends(get_db)) -> Cou
     service = CourseService(db)
     return service.create_course(course_in)
 
+@router.get("/", response_model=list[Course])
+def get_courses(db: Session = Depends(get_db)) -> list[Course]:
+    service = CourseService(db)
+    return service.db.query(service.repo.model).all()
+
 @router.get("/{course_id}", response_model=Course)
 def get_course(course_id: int, db: Session = Depends(get_db)) -> Course:
     service = CourseService(db)
@@ -19,3 +24,4 @@ def get_course(course_id: int, db: Session = Depends(get_db)) -> Course:
     if not course:
         raise HTTPException(status_code=404, detail="Course not found")
     return course
+
