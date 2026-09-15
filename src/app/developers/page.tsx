@@ -136,6 +136,7 @@ function CardBotanical() {
 function IDCard({ dev, index }: { dev: Developer; index: number }) {
   const [isTapped, setIsTapped] = useState(false);
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
+  const todayDate = new Date().toISOString().split('T')[0].replace(/-/g, '.');
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     const card = e.currentTarget;
@@ -205,7 +206,7 @@ function IDCard({ dev, index }: { dev: Developer; index: number }) {
         <div className="px-6 flex gap-6 mt-1 mb-4">
           <div>
             <p className="text-[8px] uppercase tracking-widest text-muted-foreground/70">Issue Date</p>
-            <p className="text-[10px] font-mono font-medium">2026.09.15</p>
+            <p className="text-[10px] font-mono font-medium">{todayDate}</p>
           </div>
           <div>
             <p className="text-[8px] uppercase tracking-widest text-muted-foreground/70">Clearance</p>
@@ -288,12 +289,15 @@ function IDCard({ dev, index }: { dev: Developer; index: number }) {
               if (isHigh) {
                 document.documentElement.classList.remove('theme-high');
                 document.body.classList.add('smoke-clearing');
+                
+                // Play cough immediately so it's not late
+                const cough = new Audio("/cough.mp3");
+                cough.volume = 0.6;
+                cough.play().catch(e => console.log("Audio blocked", e));
+                toast("Too strong? Back to normal.", { icon: "😮‍💨" });
+                
                 setTimeout(() => {
                   document.body.classList.remove('smoke-clearing');
-                  const cough = new Audio("/cough.mp3");
-                  cough.volume = 0.6;
-                  cough.play().catch(e => console.log("Audio blocked", e));
-                  toast("Too strong? Back to normal.", { icon: "😮‍💨" });
                 }, 2000);
               } else {
                 document.documentElement.classList.add('theme-high');
@@ -305,12 +309,14 @@ function IDCard({ dev, index }: { dev: Developer; index: number }) {
                   if (document.documentElement.classList.contains('theme-high')) {
                     document.documentElement.classList.remove('theme-high');
                     document.body.classList.add('smoke-clearing');
+                    
+                    const cough = new Audio("/cough.mp3");
+                    cough.volume = 0.6;
+                    cough.play().catch(e => {});
+                    toast("Too strong? Back to normal.", { icon: "😮‍💨" });
+                    
                     setTimeout(() => {
                       document.body.classList.remove('smoke-clearing');
-                      const cough = new Audio("/cough.mp3");
-                      cough.volume = 0.6;
-                      cough.play().catch(e => {});
-                      toast("Too strong? Back to normal.", { icon: "😮‍💨" });
                     }, 2000);
                   }
                 }, 15000);
