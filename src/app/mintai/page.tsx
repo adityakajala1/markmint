@@ -1,16 +1,24 @@
 ﻿"use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
-import { Leaf, Search, AlertCircle, BarChart3, Database, FileText, Activity } from "lucide-react";
+import { Leaf, Search, AlertCircle, BarChart3, Database, FileText, Activity, Clock, ShieldCheck, CheckCircle2 } from "lucide-react";
 
 export default function MintAIPage() {
   const [course, setCourse] = useState("");
   const [examType, setExamType] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [hasData, setHasData] = useState(false);
-  const [activeTab, setActiveTab] = useState<'dna' | 'forecast'>('forecast');
+  const [loadingStep, setLoadingStep] = useState(0);
+
+  const LOADING_STEPS = [
+    "Analyzing historical papers...",
+    "Extracting section weightage...",
+    "Detecting recurring question families...",
+    "Calculating historical volatility...",
+    "Finalizing deterministic forecast..."
+  ];
 
   const handleAnalyze = (e: React.FormEvent) => {
     e.preventDefault();
@@ -18,13 +26,22 @@ export default function MintAIPage() {
     
     setIsAnalyzing(true);
     setHasData(false);
+    setLoadingStep(0);
     
-    // Simulate backend deterministic processing
-    setTimeout(() => {
-      setIsAnalyzing(false);
-      setHasData(true);
-      setActiveTab('forecast'); // Default to forecast on fresh run
-    }, 1500);
+    // Simulate backend deterministic processing sequence
+    let step = 0;
+    const interval = setInterval(() => {
+      step++;
+      if (step >= LOADING_STEPS.length) {
+        clearInterval(interval);
+        setIsAnalyzing(false);
+        setHasData(true);
+        // Save to localStorage
+        localStorage.setItem("markmint_recent", JSON.stringify({ course, type: `${examType} Forecast` }));
+      } else {
+        setLoadingStep(step);
+      }
+    }, 600); // 600ms per step
   };
 
   return (
@@ -35,13 +52,13 @@ export default function MintAIPage() {
         
         {/* Left Panel: Configuration */}
         <div className="lg:col-span-4 flex flex-col gap-6">
-          <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
+          <div className="bg-card border border-border rounded-xl p-6 shadow-sm transition-all duration-150">
             <h2 className="text-lg font-bold mb-1 flex items-center gap-2">
               <Leaf className="w-4 h-4 text-accent" />
               Intelligence Engine
             </h2>
             <p className="text-xs text-muted-foreground mb-6">
-              Extract historical ExamDNA and generate deterministic probability forecasts.
+              Generate deterministic probability forecasts based on historical evidence.
             </p>
             
             <form onSubmit={handleAnalyze} className="space-y-4">
@@ -78,7 +95,7 @@ export default function MintAIPage() {
               <button 
                 type="submit"
                 disabled={!course || !examType || isAnalyzing}
-                className="w-full mt-4 bg-foreground text-background py-2.5 rounded-md text-sm font-medium hover:bg-foreground/90 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                className="w-full mt-4 bg-foreground text-background py-2.5 rounded-md text-sm font-medium hover:bg-foreground/90 transition-all duration-150 active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {isAnalyzing ? (
                   <>
@@ -88,7 +105,7 @@ export default function MintAIPage() {
                 ) : (
                   <>
                     <Search className="w-4 h-4" />
-                    Run Analysis
+                    Run Forecast
                   </>
                 )}
               </button>
@@ -101,7 +118,7 @@ export default function MintAIPage() {
               Evidence Rule
             </h3>
             <p className="text-xs text-muted-foreground leading-relaxed">
-              MintAI does not invent probabilities. If historical data volume is insufficient, the system returns a "Low Data Quality" status rather than guessing.
+              MintAI relies strictly on deterministic historical extraction. It does not hallucinate probabilities.
             </p>
           </div>
         </div>
@@ -110,214 +127,186 @@ export default function MintAIPage() {
         <div className="lg:col-span-8 flex flex-col gap-6">
           {!hasData && !isAnalyzing ? (
             <div className="h-full min-h-[400px] border border-dashed border-border rounded-xl flex flex-col items-center justify-center text-center p-8 bg-card/30">
-              <Database className="w-10 h-10 text-muted-foreground mb-4 opacity-50" />
+              <Database className="w-10 h-10 text-muted-foreground mb-4 opacity-30" />
               <h3 className="text-lg font-bold text-foreground mb-2">Awaiting Parameters</h3>
               <p className="text-sm text-muted-foreground max-w-sm">
-                Select a course and target examination on the left to extract the historical ExamDNA and generate a probability forecast.
+                No historical papers available yet. Select a course and target examination on the left to extract the evidence pool.
               </p>
             </div>
           ) : isAnalyzing ? (
-             <div className="h-full min-h-[400px] border border-border rounded-xl p-8 flex flex-col gap-6">
-                <div className="w-1/3 h-6 bg-muted rounded animate-pulse mb-8" />
-                <div className="grid grid-cols-3 gap-4 mb-8">
-                  <div className="h-24 bg-muted rounded-lg animate-pulse" />
-                  <div className="h-24 bg-muted rounded-lg animate-pulse" />
-                  <div className="h-24 bg-muted rounded-lg animate-pulse" />
-                </div>
-                <div className="space-y-4">
-                  <div className="w-full h-12 bg-muted rounded animate-pulse" />
-                  <div className="w-full h-12 bg-muted rounded animate-pulse" />
-                  <div className="w-full h-12 bg-muted rounded animate-pulse" />
+             <div className="h-full min-h-[400px] border border-border rounded-xl p-8 flex flex-col justify-center">
+                <div className="max-w-md mx-auto w-full">
+                  <div className="flex items-center gap-3 mb-6 text-accent">
+                    <Activity className="w-5 h-5 animate-pulse" />
+                    <span className="font-semibold text-sm tracking-widest uppercase">Analyzing Evidence Pool</span>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    {LOADING_STEPS.map((step, idx) => {
+                      const isComplete = idx < loadingStep;
+                      const isActive = idx === loadingStep;
+                      const isPending = idx > loadingStep;
+
+                      return (
+                        <div key={idx} className={`flex items-center gap-3 text-sm transition-opacity duration-300 ${isPending ? 'opacity-30' : 'opacity-100'}`}>
+                          {isComplete ? (
+                            <CheckCircle2 className="w-4 h-4 text-accent" />
+                          ) : isActive ? (
+                            <div className="w-4 h-4 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+                          ) : (
+                            <div className="w-4 h-4 rounded-full border-2 border-border" />
+                          )}
+                          <span className={`${isActive ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
+                            {step}
+                          </span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                  
+                  {/* Subtle skeleton shimmer */}
+                  <div className="mt-8 pt-8 border-t border-border/50">
+                    <div className="h-4 bg-muted/40 rounded w-1/3 animate-pulse mb-3" />
+                    <div className="h-16 bg-muted/20 rounded w-full animate-pulse" />
+                  </div>
                 </div>
              </div>
           ) : (
-            <div className="flex flex-col animate-in fade-in duration-500">
+            <div className="flex flex-col gap-8 animate-in fade-in duration-500">
               
-              {/* Internal Tabs */}
-              <div className="flex border-b border-border mb-6">
-                <button
-                  onClick={() => setActiveTab('forecast')}
-                  className={`px-6 py-3 text-sm font-semibold border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'forecast' ? 'border-accent text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'}`}
-                >
-                  <BarChart3 className="w-4 h-4" />
-                  MintAI Forecast
-                </button>
-                <button
-                  onClick={() => setActiveTab('dna')}
-                  className={`px-6 py-3 text-sm font-semibold border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'dna' ? 'border-accent text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'}`}
-                >
-                  <Activity className="w-4 h-4" />
-                  ExamDNA Structure
-                </button>
+              {/* STATE 2: DASHBOARD */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-card border border-border rounded-xl p-5 hover:border-border/80 transition-colors">
+                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Global Confidence</p>
+                  <div className="flex items-end gap-2">
+                    <span className="text-2xl font-bold text-foreground">High</span>
+                  </div>
+                </div>
+                <div className="bg-card border border-border rounded-xl p-5 hover:border-border/80 transition-colors">
+                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Historical Volatility</p>
+                  <div className="flex items-end gap-2">
+                    <span className="text-2xl font-bold text-foreground">Stable</span>
+                  </div>
+                </div>
+                <div className="bg-card border border-border rounded-xl p-5 hover:border-border/80 transition-colors">
+                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Evidence Pool</p>
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-sm font-medium text-foreground">7 Years</span>
+                    <span className="text-sm text-muted-foreground">14 Papers (186 Qs)</span>
+                  </div>
+                </div>
               </div>
 
-              {activeTab === 'forecast' ? (
-                <div className="flex flex-col gap-6">
-                  {/* Top Stats */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="bg-card border border-border rounded-xl p-5">
-                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Global Confidence</p>
-                      <div className="flex items-end gap-2">
-                        <span className="text-3xl font-bold text-foreground">High</span>
-                        <span className="text-sm text-accent font-medium mb-1 border border-accent/30 bg-accent/10 px-2 py-0.5 rounded">Tier 1</span>
+              {/* PREDICTION CARDS */}
+              <div className="flex flex-col gap-4">
+                <h3 className="font-bold text-lg flex items-center gap-2">
+                  <BarChart3 className="w-5 h-5 text-accent" />
+                  Forecasted Topics
+                </h3>
+                
+                {/* Topic 1 */}
+                <div className="bg-card border border-border rounded-xl p-5 hover:-translate-y-[1px] transition-transform duration-150">
+                  <div className="flex justify-between items-start mb-4">
+                    <div>
+                      <h4 className="text-lg font-bold text-foreground mb-1">Process Scheduling Algorithms</h4>
+                      <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                        <span className="flex items-center gap-1"><CheckCircle2 className="w-3 h-3 text-accent" /> High Confidence</span>
+                        <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> Last: 2023</span>
                       </div>
                     </div>
-                    <div className="bg-card border border-border rounded-xl p-5">
-                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Evidence Pool</p>
-                      <div className="flex items-end gap-2">
-                        <span className="text-3xl font-bold text-foreground">12</span>
-                        <span className="text-sm text-muted-foreground mb-1">papers analyzed</span>
-                      </div>
-                    </div>
-                    <div className="bg-card border border-border rounded-xl p-5">
-                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Historical Volatility</p>
-                      <div className="flex items-end gap-2">
-                        <span className="text-3xl font-bold text-foreground">0.24</span>
-                        <span className="text-sm text-muted-foreground mb-1">variance</span>
-                      </div>
+                    <div className="text-right">
+                      <div className="text-2xl font-mono font-bold text-accent">89%</div>
+                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Likelihood</div>
                     </div>
                   </div>
-
-                  {/* Main Probability Table */}
-                  <div className="bg-card border border-border rounded-xl overflow-hidden flex flex-col">
-                    <div className="px-6 py-4 border-b border-border flex justify-between items-center bg-muted/20">
-                      <h3 className="font-bold flex items-center gap-2">
-                        <Leaf className="w-4 h-4 text-accent" />
-                        Top Predicted Topics
-                      </h3>
-                      <span className="text-xs text-muted-foreground">Sorted by Likelihood Score</span>
-                    </div>
-                    
-                    <div className="p-6 flex flex-col gap-6">
-                      {/* Item 1 */}
-                      <div className="flex flex-col gap-2">
-                        <div className="flex justify-between items-center">
-                          <span className="font-semibold text-sm">Organic Synthesis Mechanisms</span>
-                          <span className="font-mono text-accent font-bold">0.85</span>
-                        </div>
-                        <div className="w-full bg-background rounded-full h-2.5 border border-border overflow-hidden">
-                          <div className="bg-accent h-full rounded-full" style={{ width: '85%' }}></div>
-                        </div>
-                        <div className="flex justify-between text-[11px] text-muted-foreground mt-1">
-                          <span>Occurrences: 9/12</span>
-                          <span>Recent Freq: 0.90 | Hist Freq: 0.75</span>
-                        </div>
-                      </div>
-
-                      {/* Item 2 */}
-                      <div className="flex flex-col gap-2">
-                        <div className="flex justify-between items-center">
-                          <span className="font-semibold text-sm">Spectroscopy Fundamentals</span>
-                          <span className="font-mono text-accent font-bold">0.68</span>
-                        </div>
-                        <div className="w-full bg-background rounded-full h-2.5 border border-border overflow-hidden">
-                          <div className="bg-accent h-full rounded-full opacity-80" style={{ width: '68%' }}></div>
-                        </div>
-                        <div className="flex justify-between text-[11px] text-muted-foreground mt-1">
-                          <span>Occurrences: 7/12</span>
-                          <span>Recent Freq: 0.40 | Hist Freq: 0.65</span>
-                        </div>
-                      </div>
-
-                      {/* Item 3 */}
-                      <div className="flex flex-col gap-2 opacity-60">
-                        <div className="flex justify-between items-center">
-                          <span className="font-semibold text-sm">Reaction Kinetics</span>
-                          <span className="font-mono text-muted-foreground font-bold">0.30</span>
-                        </div>
-                        <div className="w-full bg-background rounded-full h-2.5 border border-border overflow-hidden">
-                          <div className="bg-muted-foreground h-full rounded-full" style={{ width: '30%' }}></div>
-                        </div>
-                        <div className="flex justify-between text-[11px] text-muted-foreground mt-1">
-                          <span>Occurrences: 3/12</span>
-                          <span>Recent Freq: 0.10 | Hist Freq: 0.35</span>
-                        </div>
-                      </div>
-
-                    </div>
+                  
+                  <div className="w-full bg-background rounded-full h-1.5 mb-4 overflow-hidden">
+                    <div className="bg-accent h-full" style={{ width: '89%' }}></div>
+                  </div>
+                  
+                  <div className="flex items-center justify-between text-xs text-muted-foreground bg-background rounded-lg px-3 py-2 border border-border/50">
+                    <span>Appeared in <strong>12 of 14</strong> historical papers</span>
+                    <span>Usually appears in <strong>Section C</strong></span>
                   </div>
                 </div>
-              ) : (
-                <div className="flex flex-col gap-6">
-                  {/* Structural Summary */}
-                  <div className="bg-card border border-border rounded-xl p-6">
-                    <h3 className="font-bold flex items-center gap-2 mb-6">
-                      <FileText className="w-4 h-4 text-accent" />
-                      Historical Paper Structure
-                    </h3>
-                    
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-                      <div className="flex flex-col">
-                        <span className="text-xs text-muted-foreground uppercase mb-1">Format</span>
-                        <span className="font-semibold text-sm">Standard (3 Parts)</span>
-                      </div>
-                      <div className="flex flex-col">
-                        <span className="text-xs text-muted-foreground uppercase mb-1">Max Marks</span>
-                        <span className="font-semibold text-sm">100</span>
-                      </div>
-                      <div className="flex flex-col">
-                        <span className="text-xs text-muted-foreground uppercase mb-1">Data Quality</span>
-                        <span className="font-semibold text-sm text-green-500">Robust</span>
-                      </div>
-                      <div className="flex flex-col">
-                        <span className="text-xs text-muted-foreground uppercase mb-1">Years Mapped</span>
-                        <span className="font-semibold text-sm">2019 - 2025</span>
+
+                {/* Topic 2 */}
+                <div className="bg-card border border-border rounded-xl p-5 hover:-translate-y-[1px] transition-transform duration-150">
+                  <div className="flex justify-between items-start mb-4">
+                    <div>
+                      <h4 className="text-lg font-bold text-foreground mb-1">Deadlock Avoidance (Banker's Algorithm)</h4>
+                      <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                        <span className="flex items-center gap-1"><CheckCircle2 className="w-3 h-3 text-accent" /> High Confidence</span>
+                        <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> Last: 2023</span>
                       </div>
                     </div>
-
-                    <div className="space-y-4">
-                      <h4 className="text-sm font-semibold text-muted-foreground">Section Weightage Analysis</h4>
-                      
-                      <div className="flex items-center gap-4 text-sm">
-                        <div className="w-24 font-medium">Part A</div>
-                        <div className="flex-1 bg-background rounded-full h-2 border border-border overflow-hidden">
-                          <div className="bg-muted-foreground h-full w-[20%]"></div>
-                        </div>
-                        <div className="w-16 text-right font-mono text-muted-foreground">20%</div>
-                      </div>
-                      
-                      <div className="flex items-center gap-4 text-sm">
-                        <div className="w-24 font-medium">Part B</div>
-                        <div className="flex-1 bg-background rounded-full h-2 border border-border overflow-hidden">
-                          <div className="bg-accent h-full w-[60%]"></div>
-                        </div>
-                        <div className="w-16 text-right font-mono text-muted-foreground">60%</div>
-                      </div>
-                      
-                      <div className="flex items-center gap-4 text-sm">
-                        <div className="w-24 font-medium">Part C</div>
-                        <div className="flex-1 bg-background rounded-full h-2 border border-border overflow-hidden">
-                          <div className="bg-muted-foreground h-full w-[20%]"></div>
-                        </div>
-                        <div className="w-16 text-right font-mono text-muted-foreground">20%</div>
-                      </div>
+                    <div className="text-right">
+                      <div className="text-2xl font-mono font-bold text-foreground">76%</div>
+                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Likelihood</div>
                     </div>
-
                   </div>
+                  
+                  <div className="w-full bg-background rounded-full h-1.5 mb-4 overflow-hidden">
+                    <div className="bg-foreground/50 h-full" style={{ width: '76%' }}></div>
+                  </div>
+                  
+                  <div className="flex items-center justify-between text-xs text-muted-foreground bg-background rounded-lg px-3 py-2 border border-border/50">
+                    <span>Appeared in <strong>9 of 14</strong> historical papers</span>
+                    <span>Usually appears in <strong>Section B</strong></span>
+                  </div>
+                </div>
+              </div>
 
-                  {/* Question Families */}
-                  <div className="bg-card border border-border rounded-xl p-6">
-                    <h3 className="font-bold flex items-center gap-2 mb-6">
+              {/* EXAM DNA EVIDENCE */}
+              <div className="mt-4 pt-8 border-t border-border">
+                <h3 className="font-bold text-lg flex items-center gap-2 mb-6">
+                  <ShieldCheck className="w-5 h-5 text-muted-foreground" />
+                  Why MintAI believes this
+                </h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="bg-background border border-border rounded-xl p-5">
+                    <h4 className="text-sm font-bold mb-2 flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-accent" />
+                      Section Weightage
+                    </h4>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      Historically, Process Scheduling dominates Section C (15 marks), while Deadlock concepts appear reliably in Section B short-form questions.
+                    </p>
+                  </div>
+                  
+                  <div className="bg-background border border-border rounded-xl p-5">
+                    <h4 className="text-sm font-bold mb-2 flex items-center gap-2">
                       <Activity className="w-4 h-4 text-accent" />
                       Recurring Question Families
-                    </h3>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="p-4 border border-border rounded-lg bg-background">
-                        <p className="text-sm font-semibold mb-2">"Derive the equation for..."</p>
-                        <p className="text-xs text-muted-foreground mb-3">Often appears in Part B. Historically targets Unit 2 and Unit 4.</p>
-                        <span className="text-[10px] uppercase font-bold text-accent bg-accent/10 px-2 py-1 rounded">High Frequency Family</span>
-                      </div>
-                      
-                      <div className="p-4 border border-border rounded-lg bg-background">
-                        <p className="text-sm font-semibold mb-2">"Differentiate between..."</p>
-                        <p className="text-xs text-muted-foreground mb-3">Almost exclusively appears in Part A short answers.</p>
-                        <span className="text-[10px] uppercase font-bold text-muted-foreground border border-border px-2 py-1 rounded">Moderate Frequency Family</span>
-                      </div>
-                    </div>
+                    </h4>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      "Calculate average waiting time using Round Robin" is a highly recurring pattern detected in 7 of the last 14 papers.
+                    </p>
+                  </div>
+                  
+                  <div className="bg-background border border-border rounded-xl p-5">
+                    <h4 className="text-sm font-bold mb-2 flex items-center gap-2">
+                      <Database className="w-4 h-4 text-accent" />
+                      Historical Frequency
+                    </h4>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      Topics from Unit 2 account for 35% of total exam marks across the entire evidence pool since 2019.
+                    </p>
+                  </div>
+                  
+                  <div className="bg-background border border-border rounded-xl p-5">
+                    <h4 className="text-sm font-bold mb-2 flex items-center gap-2">
+                      <BarChart3 className="w-4 h-4 text-accent" />
+                      Trend Since 2022
+                    </h4>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      Banker's Algorithm shows a stable year-over-year occurrence rate, with zero indication of being phased out of the curriculum.
+                    </p>
                   </div>
                 </div>
-              )}
+              </div>
+
             </div>
           )}
         </div>

@@ -21,7 +21,7 @@ export function Navbar({ onMenuClick }: { onMenuClick?: () => void }) {
   ];
 
   return (
-    <header className="sticky top-0 z-50 flex h-16 items-center justify-between bg-background/90 backdrop-blur-md px-6 md:px-10 transition-all duration-300 relative border-b border-border/40">
+    <header className="relative z-50 flex h-16 items-center justify-between bg-background/90 backdrop-blur-md px-6 md:px-10 transition-all duration-300 border-b border-border/40">
       <div className="flex items-center justify-between w-full">
         
         {/* Left: Logo & SRMIST Tag */}
@@ -32,7 +32,7 @@ export function Navbar({ onMenuClick }: { onMenuClick?: () => void }) {
               MarkMint
             </span>
           </Link>
-          <span className="text-[10px] uppercase tracking-widest text-muted-foreground mt-0.5 ml-8">
+          <span className="text-[10px] tracking-widest text-muted-foreground mt-0.5 ml-8">
             For SRMIST Students
           </span>
         </div>

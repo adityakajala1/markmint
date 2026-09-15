@@ -72,7 +72,7 @@ export function GlobalFeatures() {
       />
 
       {/* Floating Action Buttons */}
-      <div className="fixed bottom-6 right-6 flex flex-col gap-4 z-50 no-print">
+      <div className="fixed bottom-6 right-6 flex flex-col gap-3 z-50 no-print items-end">
         {/* Top Button (#4) */}
         <button
           onClick={scrollToTop}
