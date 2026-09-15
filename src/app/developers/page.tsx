@@ -138,6 +138,7 @@ function CardBotanical() {
 function IDCard({ dev, index }: { dev: Developer; index: number }) {
   const [isTapped, setIsTapped] = useState(false);
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
+  const [dropped, setDropped] = useState(false);
   const todayDate = new Date().toISOString().split('T')[0].replace(/-/g, '.');
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -160,11 +161,23 @@ function IDCard({ dev, index }: { dev: Developer; index: number }) {
   };
 
   return (
-    <div className="flex flex-col items-center pb-8 perspective-[1000px]">
-      {/* Lanyard Strap */}
-      <div className="flex flex-col items-center z-10 relative">
-        <div className="w-8 h-6 bg-muted rounded-t-md border-x border-t border-border/50" />
-        <div className="w-12 h-5 bg-card rounded-b-[10px] border border-border/50 -mt-[1px]" />
+    <div className={`flex flex-col items-center pb-8 perspective-[1000px] transition-all duration-1000 ease-in ${
+      dropped ? 'translate-y-[150vh] rotate-[-20deg] opacity-0 pointer-events-none' : ''
+    }`}>
+      {/* Interactive Lanyard Clip */}
+      <div 
+        className="flex flex-col items-center z-20 relative cursor-pointer group transition-transform hover:-translate-y-1"
+        onClick={() => {
+          setDropped(true);
+          toast("Badge unclipped!", { icon: "📎" });
+          setTimeout(() => setDropped(false), 2500);
+        }}
+        title="Unclip badge"
+      >
+        {/* Fabric strap */}
+        <div className="w-5 h-8 bg-muted-foreground/20 rounded-t-sm shadow-inner group-hover:bg-accent/30 transition-colors" />
+        {/* Metal ring */}
+        <div className="w-6 h-6 rounded-full border-[3px] border-border/80 bg-background -mt-2 z-20 shadow-sm group-hover:border-accent/60 transition-colors" />
       </div>
 
       {/* Card */}
@@ -175,7 +188,7 @@ function IDCard({ dev, index }: { dev: Developer; index: number }) {
           transform: `rotateX(${tilt.x}deg) rotateY(${tilt.y}deg)`,
           transformStyle: "preserve-3d"
         }}
-        className={`relative w-[340px] sm:w-[380px] h-fit rounded-[1.5rem] overflow-hidden shadow-2xl bg-card transition-transform duration-200 ease-out ${
+        className={`relative w-[340px] sm:w-[380px] h-fit rounded-[1.5rem] overflow-hidden shadow-2xl bg-card transition-transform duration-200 ease-out -mt-3 ${
           index === 1 ? 'border-[1.5px] border-accent/40 shadow-accent/10' : 'border border-border/60'
         }`}
       >
