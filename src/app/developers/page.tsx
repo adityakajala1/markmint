@@ -160,12 +160,16 @@ function IDCard({ dev, index }: { dev: Developer; index: number }) {
         {/* Photo + Skills */}
         <div className="relative flex items-start px-6 gap-5 mt-2">
           {/* Photo */}
-          <div className="w-[150px] h-[170px] flex-shrink-0 rounded-xl overflow-hidden border border-border/50 bg-background/50 shadow-lg">
-            <img
-              src={dev.avatar}
-              alt={dev.name}
-              className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-700"
-            />
+          <div className="relative w-[150px] h-[170px] flex-shrink-0 rounded-xl overflow-visible group">
+            {/* Glow effect - triggers on hover for desktop, active for mobile */}
+            <div className="absolute inset-0 bg-accent/40 rounded-xl blur-xl opacity-0 group-hover:opacity-100 group-active:opacity-100 transition-opacity duration-700 -z-10" />
+            <div className="w-full h-full rounded-xl overflow-hidden border border-border/50 bg-background/50 shadow-lg relative z-10">
+              <img
+                src={dev.avatar}
+                alt={dev.name}
+                className="w-full h-full object-cover grayscale group-hover:grayscale-0 group-active:grayscale-0 transition-all duration-700"
+              />
+            </div>
           </div>
 
           {/* Skills */}
@@ -203,8 +207,21 @@ function IDCard({ dev, index }: { dev: Developer; index: number }) {
           </Link>
         </div>
 
-        {/* Footer: Barcode */}
-        <div className="relative flex items-end justify-end px-6 py-4 border-t border-border/50">
+        {/* Footer: Leaf & Barcode */}
+        <div className="relative flex items-end justify-between px-6 py-4 border-t border-border/50">
+          <div 
+            className="cursor-pointer group flex items-center justify-center p-2 -ml-2 rounded-full hover:bg-accent/10 transition-colors"
+            onClick={() => {
+              // Secret Easter Egg Idea 
+              console.log("Leaf clicked!");
+            }}
+          >
+            <img 
+              src="/secret-leaf.png" 
+              alt="Secret Leaf" 
+              className="w-7 h-7 opacity-80 group-hover:opacity-100 group-hover:scale-110 group-hover:rotate-12 group-active:scale-95 transition-all duration-300 dark:brightness-110" 
+            />
+          </div>
           <div className="flex items-end gap-2">
             <RealisticBarcode />
             <span className="text-[9px] font-mono text-muted-foreground/40 ml-1 mb-0.5">{dev.id}</span>
