@@ -4,6 +4,7 @@ import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
 import Link from "next/link";
 import { Leaf } from "lucide-react";
+import { toast } from "sonner";
 
 interface Developer {
   name: string;
@@ -212,8 +213,23 @@ function IDCard({ dev, index }: { dev: Developer; index: number }) {
           <div 
             className="cursor-pointer group flex items-center justify-center p-2 -ml-2 rounded-full hover:bg-accent/10 transition-colors"
             onClick={() => {
-              // Secret Easter Egg Idea 
-              console.log("Leaf clicked!");
+              // Toggle High Mode (Theme shift)
+              document.documentElement.classList.toggle('theme-high');
+              
+              // Play lighter click / puff sound
+              const audio = new Audio("https://actions.google.com/sounds/v1/foley/lighter_flick.ogg");
+              audio.volume = 0.5;
+              audio.play().catch(e => console.log("Audio play blocked", e));
+              
+              // Auto-revert after 15 seconds if they turned it on
+              if (document.documentElement.classList.contains('theme-high')) {
+                toast.success("High Mode Activated 🌿", { icon: "🔥" });
+                setTimeout(() => {
+                  document.documentElement.classList.remove('theme-high');
+                }, 15000);
+              } else {
+                toast("Back to reality.", { icon: "🧊" });
+              }
             }}
           >
             <img 

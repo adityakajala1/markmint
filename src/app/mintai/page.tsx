@@ -6,26 +6,24 @@ import { Footer } from "@/components/layout/footer";
 import { Leaf, Search, AlertCircle, BarChart3, Database, FileText, Activity, Clock, ShieldCheck, CheckCircle2 } from "lucide-react";
 import { getCourses, getPredictions, getExamDNA } from "@/lib/api";
 import { BackendCourse, PredictionResponse, ExamDNAAnalysis, BackendPrediction } from "@/lib/types";
+import { CURRICULUM } from "@/lib/curriculumData";
 
 export default function MintAIPage() {
-  const [courses, setCourses] = useState<BackendCourse[]>([]);
+  const [selectedBranch, setSelectedBranch] = useState("Computer Science and Engineering");
+  const [selectedSemester, setSelectedSemester] = useState("1");
   const [selectedCourse, setSelectedCourse] = useState("");
+  const [selectedExam, setSelectedExam] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [hasData, setHasData] = useState(false);
   const [error, setError] = useState("");
 
+  const branches = Object.keys(CURRICULUM).sort();
+  const semesters = CURRICULUM[selectedBranch] ? Object.keys(CURRICULUM[selectedBranch]).sort((a,b)=>parseInt(a)-parseInt(b)) : [];
+  const subjects = CURRICULUM[selectedBranch]?.[selectedSemester] || [];
+  const exams = ["CT1", "CT2", "CT3", "CT4", "END SEM"];
+
   const [predictions, setPredictions] = useState<PredictionResponse | null>(null);
   const [dna, setDna] = useState<ExamDNAAnalysis | null>(null);
-
-  useEffect(() => {
-    getCourses().then((data) => {
-      // Data might be an array or an object with an array
-      const courseList = Array.isArray(data) ? data : (data.items || data.courses || []);
-      setCourses(courseList);
-    }).catch(err => {
-      console.error("Failed to load courses", err);
-    });
-  }, []);
 
   const handleAnalyze = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,9 +34,7 @@ export default function MintAIPage() {
     setError("");
     
     try {
-      // Find the course to get its name if subject is needed
-      const courseObj = courses.find(c => c.course_id === selectedCourse || (c as any).id === selectedCourse);
-      const subject = courseObj ? courseObj.course_name || courseObj.course_id || selectedCourse : selectedCourse;
+      const subject = selectedCourse;
       
       const [predData, dnaData] = await Promise.all([
         getPredictions(subject).catch(e => {
@@ -83,25 +79,66 @@ export default function MintAIPage() {
             <form onSubmit={handleAnalyze} className="space-y-4">
               <div>
                 <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2 block">
+                  Select Branch
+                </label>
+                <select 
+                  value={selectedBranch}
+                  onChange={(e) => { setSelectedBranch(e.target.value); setSelectedSemester("1"); setSelectedCourse(""); }}
+                  className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:border-accent transition-colors appearance-none mb-4"
+                >
+                  {branches.map(b => (
+                    <option key={b} value={b}>{b}</option>
+                  ))}
+                </select>
+
+                <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2 block">
+                  Select Semester
+                </label>
+                <select 
+                  value={selectedSemester}
+                  onChange={(e) => { setSelectedSemester(e.target.value); setSelectedCourse(""); }}
+                  className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:border-accent transition-colors appearance-none mb-4"
+                >
+                  <option value="" disabled>Select a semester</option>
+                  {semesters.map(s => (
+                    <option key={s} value={s}>Semester {s}</option>
+                  ))}
+                </select>
+
+                <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2 block">
                   Select Course
                 </label>
                 <select 
                   value={selectedCourse}
                   onChange={(e) => setSelectedCourse(e.target.value)}
-                  className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:border-accent transition-colors appearance-none"
+                  className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:border-accent transition-colors appearance-none mb-4"
                 >
                   <option value="" disabled>Select a course</option>
-                  {courses.map((c: any) => (
-                    <option key={c.course_id || c.id} value={c.course_id || c.id}>
-                      {c.course_code || c.code} - {c.course_name || c.name}
+                  {subjects.map((c: any) => (
+                    <option key={c.id} value={c.name}>
+                      {c.name}
                     </option>
+                  ))}
+                </select>
+
+                <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2 block">
+                  Select Examination
+                </label>
+                <select 
+                  value={selectedExam}
+                  onChange={(e) => setSelectedExam(e.target.value)}
+                  className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:border-accent transition-colors appearance-none"
+                >
+                  <option value="" disabled>Select an exam</option>
+                  {exams.map(ex => (
+                    <option key={ex} value={ex}>{ex}</option>
                   ))}
                 </select>
               </div>
 
               <button 
                 type="submit"
-                disabled={!selectedCourse || isAnalyzing}
+                disabled={!selectedCourse || !selectedExam || isAnalyzing}
                 className="w-full mt-4 bg-foreground text-background py-2.5 rounded-md text-sm font-medium hover:bg-foreground/90 transition-all duration-150 active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {isAnalyzing ? (

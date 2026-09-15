@@ -126,3 +126,21 @@ nextjs-portal,
 }
 
 
+.theme-high {
+  --background: 280 50% 10%; /* Deep purple */
+  --foreground: 120 100% 50%; /* Neon green */
+  --card: 280 60% 15%;
+  --card-foreground: 120 100% 60%;
+  --border: 120 100% 30%;
+  --primary: 120 100% 40%;
+  --primary-foreground: 280 50% 10%;
+  --accent: 120 100% 50%;
+  --accent-foreground: 280 50% 10%;
+  --muted: 280 40% 20%;
+  --muted-foreground: 120 70% 60%;
+  transition: all 1s ease-in-out;
+}
+.theme-high img {
+  filter: hue-rotate(90deg) contrast(150%);
+  transition: filter 1s ease-in-out;
+}
