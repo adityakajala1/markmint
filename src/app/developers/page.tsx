@@ -5,6 +5,7 @@ import { Footer } from "@/components/layout/footer";
 import Link from "next/link";
 import { Leaf } from "lucide-react";
 import { toast } from "sonner";
+import { useState } from "react";
 
 declare global {
   interface Window {
@@ -133,6 +134,8 @@ function CardBotanical() {
 }
 
 function IDCard({ dev, index }: { dev: Developer; index: number }) {
+  const [isTapped, setIsTapped] = useState(false);
+
   return (
     <div className="flex flex-col items-center pb-8">
       {/* Lanyard Strap */}
@@ -167,14 +170,17 @@ function IDCard({ dev, index }: { dev: Developer; index: number }) {
         {/* Photo + Skills */}
         <div className="relative flex items-start px-6 gap-5 mt-2">
           {/* Photo */}
-          <div className="relative w-[150px] h-[170px] flex-shrink-0 rounded-xl overflow-visible group">
-            {/* Glow effect - triggers on hover for desktop, active for mobile */}
-            <div className="absolute inset-0 bg-accent/40 rounded-xl blur-xl opacity-0 group-hover:opacity-100 group-active:opacity-100 transition-opacity duration-700 -z-10" />
+          <div 
+            className="relative w-[150px] h-[170px] flex-shrink-0 rounded-xl overflow-visible group cursor-pointer"
+            onClick={() => setIsTapped(!isTapped)}
+          >
+            {/* Glow effect */}
+            <div className={`absolute inset-0 bg-accent/40 rounded-xl blur-xl transition-opacity duration-700 -z-10 ${isTapped ? 'opacity-100' : 'opacity-0 md:group-hover:opacity-100'}`} />
             <div className="w-full h-full rounded-xl overflow-hidden border border-border/50 bg-background/50 shadow-lg relative z-10">
               <img
                 src={dev.avatar}
                 alt={dev.name}
-                className="w-full h-full object-cover grayscale group-hover:grayscale-0 group-active:grayscale-0 transition-all duration-700"
+                className={`w-full h-full object-cover transition-all duration-700 ${isTapped ? 'grayscale-0' : 'grayscale md:group-hover:grayscale-0'}`}
               />
             </div>
           </div>
