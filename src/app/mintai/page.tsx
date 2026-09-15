@@ -170,10 +170,17 @@ export default function MintAIPage() {
         {/* Right Panel: Data Dashboard */}
         <div className="lg:col-span-8 flex flex-col gap-6">
           {error ? (
-            <div className="h-full min-h-[400px] border border-red-500/20 bg-red-500/5 rounded-xl flex flex-col items-center justify-center text-center p-8">
-              <AlertCircle className="w-10 h-10 text-red-500 mb-4 opacity-80" />
-              <h3 className="text-lg font-bold text-red-500 mb-2">Analysis Failed</h3>
-              <p className="text-sm text-red-400 max-w-sm">{error}</p>
+            <div className="h-full min-h-[400px] border border-red-500/20 bg-red-500/5 rounded-xl flex flex-col items-center justify-center text-center p-8 relative overflow-hidden">
+              <img 
+                src="/dog-guilty.jpg" 
+                alt="Guilty dog" 
+                className="w-32 h-32 rounded-full object-cover border-4 border-red-500/20 shadow-lg mb-6 hover:scale-105 transition-transform"
+              />
+              <h3 className="text-xl font-bold text-red-500 mb-2">Analysis Failed</h3>
+              <p className="text-sm text-red-400 max-w-sm mb-2">{error}</p>
+              <p className="text-xs text-red-400/70 max-w-sm italic">
+                "Sorry, this dog ate your prediction while the backend was asleep. (API Connection Refused)"
+              </p>
             </div>
           ) : !hasData && !isAnalyzing ? (
             <div className="h-full min-h-[400px] border border-dashed border-border rounded-xl flex flex-col items-center justify-center text-center p-8 bg-card/30">

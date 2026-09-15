@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Home } from "lucide-react";
+import { Home, Leaf } from "lucide-react";
 import { Navbar } from "@/components/layout/navbar";
 
 type Stage = "NORMAL" | "ASTEROID" | "DESTRUCTION" | "BEAM" | "VOID" | "RESOLVED";
@@ -33,8 +33,8 @@ export default function NotFound() {
       {/* Styles for the animations */}
       <style jsx>{`
         @keyframes asteroidFall {
-          0% { transform: translate(50vw, -150vh) scale(1) rotate(0deg); opacity: 1; }
-          100% { transform: translate(0, 0) scale(4) rotate(-45deg); opacity: 1; }
+          0% { transform: translate(50vw, -150vh) scale(0.5) rotate(0deg); opacity: 1; }
+          100% { transform: translate(0, 0) scale(2) rotate(-90deg); opacity: 1; }
         }
         .animate-asteroid {
           animation: asteroidFall 1s cubic-bezier(0.55, 0.085, 0.68, 0.53) forwards;
@@ -117,7 +117,14 @@ export default function NotFound() {
       {/* --- LAYER 2: The Asteroid --- */}
       {(stage === "ASTEROID" || stage === "DESTRUCTION") && (
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 pointer-events-none animate-asteroid">
-          <span className="text-[12rem] drop-shadow-[0_0_80px_rgba(239,68,68,0.8)] filter">☄️</span>
+          <img 
+            src="/asteroid.jpg" 
+            alt="Asteroid" 
+            className="w-64 h-64 mix-blend-screen rounded-full"
+            style={{
+              filter: "drop-shadow(0 0 40px rgba(239,68,68,0.5)) drop-shadow(0 0 100px rgba(249,115,22,0.8)) sepia(0.5) hue-rotate(-20deg) contrast(1.5)"
+            }}
+          />
         </div>
       )}
 
@@ -134,7 +141,7 @@ export default function NotFound() {
         <div className={`absolute top-1/2 left-1/2 animate-float-space transition-all duration-1000 ${stage === "RESOLVED" ? "scale-75 opacity-30 -translate-y-[15vh]" : "scale-100 opacity-80"}`}>
           <div className="relative">
             <div className="absolute inset-0 bg-emerald-500 rounded-full blur-[50px] opacity-20"></div>
-            <img src="/secret-leaf.png" alt="Lost Leaf" className="w-24 h-24 sm:w-32 sm:h-32 drop-shadow-[0_0_15px_rgba(16,185,129,0.5)] opacity-80 brightness-110 object-contain" />
+            <Leaf className="w-24 h-24 sm:w-32 sm:h-32 text-emerald-500 drop-shadow-[0_0_15px_rgba(16,185,129,0.8)]" />
           </div>
         </div>
 
