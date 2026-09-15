@@ -32,6 +32,15 @@ def migrate(source_url: str, target_url: str):
     source_session = SourceSession()
     target_session = TargetSession()
     
+    # Idempotency check: if target already has courses, skip
+    try:
+        target_count = target_session.execute(text("SELECT COUNT(*) FROM courses")).scalar()
+        if target_count and target_count > 0:
+            print("Idempotency Check: Target database is already populated. Skipping migration.")
+            return
+    except Exception:
+        target_session.rollback()
+
     try:
         if target_engine.dialect.name == 'postgresql':
             try:
