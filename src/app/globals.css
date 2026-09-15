@@ -144,3 +144,13 @@ nextjs-portal,
   filter: hue-rotate(90deg) contrast(150%);
   transition: filter 1s ease-in-out;
 }
+
+@keyframes smokeClear {
+  0% { filter: blur(12px) contrast(80%); opacity: 0.6; }
+  50% { filter: blur(5px) contrast(90%); opacity: 0.8; }
+  100% { filter: blur(0px) contrast(100%); opacity: 1; }
+}
+
+.smoke-clearing {
+  animation: smokeClear 2s ease-out forwards;
+}

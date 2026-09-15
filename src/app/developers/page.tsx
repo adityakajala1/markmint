@@ -6,6 +6,12 @@ import Link from "next/link";
 import { Leaf } from "lucide-react";
 import { toast } from "sonner";
 
+declare global {
+  interface Window {
+    leafTimer?: any;
+  }
+}
+
 interface Developer {
   name: string;
   role: string;
@@ -213,22 +219,46 @@ function IDCard({ dev, index }: { dev: Developer; index: number }) {
           <div 
             className="cursor-pointer group flex items-center justify-center p-2 -ml-2 rounded-full hover:bg-accent/10 transition-colors"
             onClick={() => {
-              // Toggle High Mode (Theme shift)
-              document.documentElement.classList.toggle('theme-high');
+              const isHigh = document.documentElement.classList.contains('theme-high');
               
-              // Play Snoop Dogg sound
-              const audio = new Audio("/snoop.mp3");
-              audio.volume = 0.8;
-              audio.play().catch(e => console.log("Audio play blocked", e));
-              
-              // Auto-revert after 15 seconds if they turned it on
-              if (document.documentElement.classList.contains('theme-high')) {
-                toast.success("High Mode Activated 🌿", { icon: "🔥" });
-                setTimeout(() => {
-                  document.documentElement.classList.remove('theme-high');
-                }, 15000);
+              // Clear any existing timer so it doesn't overlap
+              if (window.leafTimer) clearTimeout(window.leafTimer);
+
+              if (isHigh) {
+                // TURN OFF LOGIC
+                document.documentElement.classList.remove('theme-high');
+                document.body.classList.add('smoke-clearing');
+                setTimeout(() => document.body.classList.remove('smoke-clearing'), 2000);
+                
+                const cough = new Audio("/cough.mp3");
+                cough.volume = 0.6;
+                cough.play().catch(e => console.log("Audio blocked", e));
+                
+                toast("Too strong? Back to normal.", { icon: "😮‍💨" });
               } else {
-                toast("Back to reality.", { icon: "🧊" });
+                // TURN ON LOGIC
+                document.documentElement.classList.add('theme-high');
+                
+                const audio = new Audio("/snoop.mp3");
+                audio.volume = 0.8;
+                audio.play().catch(e => console.log("Audio play blocked", e));
+                
+                toast.success("High Mode Activated 🌿", { icon: "🔥" });
+                
+                // Auto-revert after 15 seconds
+                window.leafTimer = setTimeout(() => {
+                  if (document.documentElement.classList.contains('theme-high')) {
+                    document.documentElement.classList.remove('theme-high');
+                    document.body.classList.add('smoke-clearing');
+                    setTimeout(() => document.body.classList.remove('smoke-clearing'), 2000);
+                    
+                    const cough = new Audio("/cough.mp3");
+                    cough.volume = 0.6;
+                    cough.play().catch(e => {});
+                    
+                    toast("Too strong? Back to normal.", { icon: "😮‍💨" });
+                  }
+                }, 15000);
               }
             }}
           >
