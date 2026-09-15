@@ -39,7 +39,7 @@ const developers: Developer[] = [
     status: "Larping",
     avatar: "https://github.com/namanipie.png",
     github: "https://github.com/namanipie",
-    linkedin: "https://linkedin.com/in/namankumar",
+    linkedin: "https://www.linkedin.com/in/namannkumar",
     instagram: "https://instagram.com/nam4nn",
     number: "02",
     id: "MM - DEV - 02",

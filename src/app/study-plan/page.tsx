@@ -214,9 +214,9 @@ export default function StudyIntelligencePage() {
                 </div>
               </div>
               <div className="bg-card border border-border rounded-xl p-5 hover:border-border/80 transition-colors">
-                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Overall Probability</p>
+                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Overall Score</p>
                 <div className="flex items-end gap-2">
-                  <span className="text-2xl font-bold text-primary font-mono">{studyData.overall_probability ? Math.round(studyData.overall_probability * 100) + '%' : 'N/A'}</span>
+                  <span className="text-2xl font-bold text-primary font-mono">{studyData.overall_probability ? (studyData.overall_probability).toFixed(2) : 'N/A'}</span>
                 </div>
               </div>
               <div className="bg-card border border-border rounded-xl p-5 hover:border-border/80 transition-colors">
@@ -251,8 +251,8 @@ export default function StudyIntelligencePage() {
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="text-2xl font-mono font-bold text-foreground">{topic.probability ? Math.round(topic.probability * 100) : 0}%</div>
-                        <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Probability</div>
+                        <div className="text-2xl font-mono font-bold text-foreground">{topic.probability ? (topic.probability).toFixed(2) : '0.00'}</div>
+                        <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Score</div>
                       </div>
                     </div>
                     
